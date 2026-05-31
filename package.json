@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:types": "supabase gen types typescript --linked > src/lib/supabase/database.types.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
