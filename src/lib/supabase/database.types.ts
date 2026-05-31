@@ -39,7 +39,144 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      annual_expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          due_date: string
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      attachments: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["attachment_entity"]
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          mime_type: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["attachment_entity"]
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          mime_type?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["attachment_entity"]
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          mime_type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      income: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          frequency: Database["public"]["Enums"]["income_frequency"]
+          id: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          frequency: Database["public"]["Enums"]["income_frequency"]
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          frequency?: Database["public"]["Enums"]["income_frequency"]
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          active: boolean
+          amount: number
+          created_at: string
+          debit_day: number
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          created_at?: string
+          debit_day: number
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          created_at?: string
+          debit_day?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -48,7 +185,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      attachment_entity: "service" | "annual_expense" | "income"
+      income_frequency: "monthly" | "annual" | "fixed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -178,6 +316,9 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      attachment_entity: ["service", "annual_expense", "income"],
+      income_frequency: ["monthly", "annual", "fixed"],
+    },
   },
 } as const
