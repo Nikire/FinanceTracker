@@ -17,6 +17,8 @@ import {
 
 interface IngresoFormProps {
   ingreso?: Tables<"income">;
+  year: number;
+  month: number;
   onSuccess: () => void;
 }
 
@@ -26,7 +28,7 @@ const FREQUENCY_LABELS = {
   fixed: "Fijo (único)",
 };
 
-export function IngresoForm({ ingreso, onSuccess }: IngresoFormProps) {
+export function IngresoForm({ ingreso, year, month, onSuccess }: IngresoFormProps) {
   const form = useForm<IncomeFormValues>({
     resolver: zodResolver(incomeSchema) as Resolver<IncomeFormValues>,
     defaultValues: ingreso
@@ -44,7 +46,7 @@ export function IngresoForm({ ingreso, onSuccess }: IngresoFormProps) {
   async function onSubmit(values: IncomeFormValues) {
     const result = ingreso
       ? await updateIncome(ingreso.id, values)
-      : await createIncome(values);
+      : await createIncome(values, year, month);
 
     if (result.error) {
       toast.error(result.error);

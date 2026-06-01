@@ -62,24 +62,27 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
   const exchangeRate = exchangeRates.find((r) => r.year === year && r.month === month) ?? null;
   const rate = exchangeRate?.usd_to_ars ?? null;
 
+  // Solo los ingresos cargados en el mes seleccionado
+  const monthIngresos = ingresos.filter((i) => i.year === year && i.month === month);
+
   function toARS(amount: number, currency: string, r: number | null): number {
     if (currency === "USD") return r ? amount * r : 0;
     return amount;
   }
 
-  // Ingreso mensual recurrente, unificado a ARS con la cotización del mes
-  const monthlyUnifiedARS = ingresos
+  // Ingreso mensual recurrente del mes, unificado a ARS con la cotización del mes
+  const monthlyUnifiedARS = monthIngresos
     .filter((i) => i.frequency === "monthly")
     .reduce((sum, i) => sum + toARS(i.amount, i.currency ?? "ARS", rate), 0);
 
-  // Todos los ingresos (mensual + anual + fijo), unificado a ARS
-  const totalUnifiedARS = ingresos.reduce(
+  // Total del mes (mensual + anual + fijo), unificado a ARS
+  const totalUnifiedARS = monthIngresos.reduce(
     (sum, i) => sum + toARS(i.amount, i.currency ?? "ARS", rate),
     0
   );
 
   // ¿Hay ingresos en USD que no podemos convertir por falta de cotización?
-  const usdSinCotizar = !rate && ingresos.some((i) => i.currency === "USD");
+  const usdSinCotizar = !rate && monthIngresos.some((i) => i.currency === "USD");
 
   return (
     <div className="space-y-4">
@@ -106,7 +109,7 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
             <DialogHeader>
               <DialogTitle>Nuevo ingreso</DialogTitle>
             </DialogHeader>
-            <IngresoForm onSuccess={() => setOpenCreate(false)} />
+            <IngresoForm year={year} month={month} onSuccess={() => setOpenCreate(false)} />
           </DialogContent>
         </Dialog>
       </div>
@@ -117,20 +120,15 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
       {/* Resumen de totales */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-lg border bg-card px-4 py-3">
-          <p className="text-xs text-muted-foreground">{ingresos.length} ingresos</p>
+          <p className="text-xs text-muted-foreground">{monthIngresos.length} ingresos del mes</p>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {ingresos.filter((i) => i.frequency === "monthly").length} mensuales ·{" "}
-            {ingresos.filter((i) => i.frequency === "annual").length} anuales ·{" "}
-            {ingresos.filter((i) => i.frequency === "fixed").length} fijos
+            {monthIngresos.filter((i) => i.frequency === "monthly").length} mensuales ·{" "}
+            {monthIngresos.filter((i) => i.frequency === "annual").length} anuales ·{" "}
+            {monthIngresos.filter((i) => i.frequency === "fixed").length} fijos
           </p>
         </div>
         <div className="rounded-lg border bg-card px-4 py-3">
-          <p className="text-xs text-muted-foreground">Mensual (ARS)</p>
-          <p className="mt-0.5 font-semibold font-mono">{formatCurrency(monthlyUnifiedARS)}</p>
-          <p className="text-xs text-muted-foreground">ingresos recurrentes</p>
-        </div>
-        <div className="rounded-lg border bg-card px-4 py-3">
-          <p className="text-xs text-muted-foreground">Total general (ARS)</p>
+          <p className="text-xs text-muted-foreground">Total del mes (ARS)</p>
           <p className="mt-0.5 font-semibold font-mono">{formatCurrency(totalUnifiedARS)}</p>
           {usdSinCotizar ? (
             <p className="text-xs text-amber-600 dark:text-amber-400">configurá la cotización para incluir USD</p>
@@ -138,13 +136,20 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
             <p className="text-xs text-muted-foreground">mensual + anual + fijo</p>
           )}
         </div>
+        <div className="rounded-lg border bg-card px-4 py-3">
+          <p className="text-xs text-muted-foreground">Mensual recurrente (ARS)</p>
+          <p className="mt-0.5 font-semibold font-mono">{formatCurrency(monthlyUnifiedARS)}</p>
+          <p className="text-xs text-muted-foreground">solo frecuencia mensual</p>
+        </div>
       </div>
 
-      {ingresos.length === 0 ? (
+      {monthIngresos.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
-          <p className="text-sm text-muted-foreground">No hay ingresos cargados</p>
+          <p className="text-sm text-muted-foreground">
+            No hay ingresos cargados en {MONTHS[month - 1]} {year}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Hacé click en "Nuevo ingreso" para empezar
+            Hacé click en "Nuevo ingreso" para agregar uno a este mes
           </p>
         </div>
       ) : (
@@ -160,7 +165,7 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ingresos.map((ingreso) => {
+            {monthIngresos.map((ingreso) => {
               const currency = (ingreso.currency ?? "ARS") as "ARS" | "USD";
               return (
                 <TableRow key={ingreso.id}>
@@ -225,6 +230,8 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
                           </DialogHeader>
                           <IngresoForm
                             ingreso={ingreso}
+                            year={year}
+                            month={month}
                             onSuccess={() => setEditingIngreso(null)}
                           />
                         </DialogContent>

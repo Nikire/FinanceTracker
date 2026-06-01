@@ -150,9 +150,11 @@ export type Database = {
           description: string
           frequency: Database["public"]["Enums"]["income_frequency"]
           id: string
+          month: number
           notes: string | null
           updated_at: string
           user_id: string
+          year: number
         }
         Insert: {
           amount: number
@@ -162,9 +164,11 @@ export type Database = {
           description: string
           frequency: Database["public"]["Enums"]["income_frequency"]
           id?: string
+          month: number
           notes?: string | null
           updated_at?: string
           user_id: string
+          year: number
         }
         Update: {
           amount?: number
@@ -174,9 +178,11 @@ export type Database = {
           description?: string
           frequency?: Database["public"]["Enums"]["income_frequency"]
           id?: string
+          month?: number
           notes?: string | null
           updated_at?: string
           user_id?: string
+          year?: number
         }
         Relationships: []
       }

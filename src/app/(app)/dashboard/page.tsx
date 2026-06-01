@@ -30,10 +30,25 @@ function sumGastos(services: ServiceRow[], rate: number | null) {
     .reduce((sum, s) => sum + toARS(s.amount, s.currency, rate), 0);
 }
 
-function sumIngresosMensuales(ingresos: IngresoRow[], rate: number | null) {
-  return ingresos
-    .filter((i) => i.frequency === "monthly")
-    .reduce((sum, i) => sum + toARS(i.amount, i.currency, rate), 0);
+// Suma todos los ingresos (mensual + anual + fijo) unificados a ARS
+function sumIngresos(ingresos: IngresoRow[], rate: number | null) {
+  return ingresos.reduce((sum, i) => sum + toARS(i.amount, i.currency, rate), 0);
+}
+
+// Cotización efectiva: la del mes actual o, si no existe, la más reciente cargada
+function resolveRate(
+  rates: { usd_to_ars: number; kind: string; year: number; month: number }[],
+  kind: string,
+  year: number,
+  month: number
+): number | null {
+  const ofKind = rates.filter((r) => r.kind === kind);
+  const current = ofKind.find((r) => r.year === year && r.month === month);
+  if (current) return current.usd_to_ars;
+  const latest = ofKind
+    .slice()
+    .sort((a, b) => b.year * 12 + b.month - (a.year * 12 + a.month))[0];
+  return latest?.usd_to_ars ?? null;
 }
 
 function buildChartData(
@@ -50,7 +65,7 @@ function buildChartData(
     const mes = MESES[fecha.getMonth()];
     return {
       mes,
-      ingresos: sumIngresosMensuales(ingresos, incomeRate),
+      ingresos: sumIngresos(ingresos, incomeRate),
       gastos: sumGastos(services, serviceRate),
     };
   });
@@ -67,17 +82,19 @@ export default async function DashboardPage() {
     await Promise.all([
       supabase.from("services").select("amount, active, currency"),
       supabase.from("annual_expenses").select("due_date, amount"),
-      supabase.from("income").select("amount, frequency, currency"),
-      supabase.from("exchange_rates").select("usd_to_ars, kind").eq("year", year).eq("month", month),
+      supabase
+        .from("income")
+        .select("amount, frequency, currency")
+        .eq("year", year)
+        .eq("month", month),
+      supabase.from("exchange_rates").select("usd_to_ars, kind, year, month"),
     ]);
 
-  const serviceRate =
-    (rates ?? []).find((r) => r.kind === "service")?.usd_to_ars ?? null;
-  const incomeRate =
-    (rates ?? []).find((r) => r.kind === "income")?.usd_to_ars ?? null;
+  const serviceRate = resolveRate(rates ?? [], "service", year, month);
+  const incomeRate = resolveRate(rates ?? [], "income", year, month);
 
   const gastosMensuales = sumGastos((services ?? []) as ServiceRow[], serviceRate);
-  const ingresosMensuales = sumIngresosMensuales((ingresos ?? []) as IngresoRow[], incomeRate);
+  const ingresosMensuales = sumIngresos((ingresos ?? []) as IngresoRow[], incomeRate);
 
   const balance = ingresosMensuales - gastosMensuales;
   const gastosAnualesProximos = getProximos30Dias(gastos ?? []);

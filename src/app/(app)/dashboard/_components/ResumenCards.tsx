@@ -20,13 +20,13 @@ export function ResumenCards({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Ingresos mensuales
+            Ingresos
           </CardTitle>
           <TrendingUp className="h-4 w-4 text-emerald-500" />
         </CardHeader>
         <CardContent>
           <p className="text-2xl font-bold">{formatCurrency(ingresosMensuales)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Ingresos recurrentes</p>
+          <p className="mt-1 text-xs text-muted-foreground">Total unificado (ARS)</p>
         </CardContent>
       </Card>
 
