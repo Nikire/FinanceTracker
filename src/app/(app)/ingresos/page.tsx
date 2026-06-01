@@ -7,7 +7,7 @@ export default async function IngresosPage() {
 
   const [{ data: ingresos }, { data: exchangeRates }] = await Promise.all([
     supabase.from("income").select("*").order("description"),
-    supabase.from("exchange_rates").select("*").eq("user_id", user!.id),
+    supabase.from("exchange_rates").select("*").eq("user_id", user!.id).eq("kind", "income"),
   ]);
 
   return (

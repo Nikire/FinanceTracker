@@ -14,11 +14,17 @@ interface ExchangeRateBarProps {
   year: number;
   month: number;
   rate: Tables<"exchange_rates"> | null;
+  kind?: "service" | "income";
 }
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-export function ExchangeRateBar({ year, month, rate }: ExchangeRateBarProps) {
+const KIND_LABELS: Record<"service" | "income", string> = {
+  service: "saliente",
+  income: "entrante",
+};
+
+export function ExchangeRateBar({ year, month, rate, kind = "service" }: ExchangeRateBarProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(rate?.usd_to_ars?.toString() ?? "");
@@ -31,7 +37,7 @@ export function ExchangeRateBar({ year, month, rate }: ExchangeRateBarProps) {
       return;
     }
     setLoading(true);
-    const result = await upsertExchangeRate(year, month, num);
+    const result = await upsertExchangeRate(year, month, num, kind);
     setLoading(false);
     if (result.error) {
       toast.error(result.error);
@@ -50,7 +56,7 @@ export function ExchangeRateBar({ year, month, rate }: ExchangeRateBarProps) {
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-2.5 text-sm">
       <span className="text-muted-foreground">
-        USD/ARS {MONTHS[month - 1]} {year}:
+        USD/ARS {KIND_LABELS[kind]} {MONTHS[month - 1]} {year}:
       </span>
 
       {editing ? (

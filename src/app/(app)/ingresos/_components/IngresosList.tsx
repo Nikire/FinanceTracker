@@ -105,7 +105,7 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
       </div>
 
       {/* Tipo de cambio */}
-      <ExchangeRateBar year={year} month={month} rate={exchangeRate} />
+      <ExchangeRateBar year={year} month={month} rate={exchangeRate} kind="income" />
 
       {/* Resumen de totales */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

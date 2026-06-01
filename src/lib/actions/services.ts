@@ -254,23 +254,24 @@ export async function autoMarkPaidForMonth(year: number, month: number) {
 export async function upsertExchangeRate(
   year: number,
   month: number,
-  usd_to_ars: number
+  usd_to_ars: number,
+  kind: "service" | "income" = "service"
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "No autenticado" };
 
-  const parsed = exchangeRateSchema.safeParse({ year, month, usd_to_ars });
+  const parsed = exchangeRateSchema.safeParse({ year, month, kind, usd_to_ars });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const { error } = await supabase
     .from("exchange_rates")
     .upsert(
-      { user_id: user.id, year, month, usd_to_ars },
-      { onConflict: "user_id,year,month" }
+      { user_id: user.id, year, month, kind, usd_to_ars },
+      { onConflict: "user_id,year,month,kind" }
     );
 
   if (error) return { error: error.message };
-  revalidatePath("/servicios");
+  revalidatePath(kind === "income" ? "/ingresos" : "/servicios");
   return { success: true };
 }

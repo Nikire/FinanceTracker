@@ -210,7 +210,7 @@ export function ServiciosList({ services, records, exchangeRates }: ServiciosLis
         </div>
       </div>
 
-      <ExchangeRateBar year={year} month={month} rate={exchangeRate} />
+      <ExchangeRateBar year={year} month={month} rate={exchangeRate} kind="service" />
 
       {/* Resumen + totales */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

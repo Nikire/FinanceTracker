@@ -32,6 +32,7 @@ export type ServiceFormValues = z.infer<typeof serviceSchema>;
 export const exchangeRateSchema = z.object({
   year: z.number().int(),
   month: z.number().int().min(1).max(12),
+  kind: z.enum(["service", "income"]),
   usd_to_ars: z
     .number({ error: "Ingresá un valor válido" })
     .positive("El tipo de cambio debe ser mayor a 0"),

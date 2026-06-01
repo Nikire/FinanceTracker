@@ -112,6 +112,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          kind: Database["public"]["Enums"]["exchange_rate_kind"]
           month: number
           updated_at: string
           usd_to_ars: number
@@ -121,6 +122,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["exchange_rate_kind"]
           month: number
           updated_at?: string
           usd_to_ars: number
@@ -130,6 +132,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["exchange_rate_kind"]
           month?: number
           updated_at?: string
           usd_to_ars?: number
@@ -288,6 +291,7 @@ export type Database = {
     Enums: {
       attachment_entity: "service" | "annual_expense" | "income"
       currency_type: "ARS" | "USD"
+      exchange_rate_kind: "service" | "income"
       income_frequency: "monthly" | "annual" | "fixed"
       service_recurrence: "monthly" | "one_time"
     }
@@ -422,6 +426,7 @@ export const Constants = {
     Enums: {
       attachment_entity: ["service", "annual_expense", "income"],
       currency_type: ["ARS", "USD"],
+      exchange_rate_kind: ["service", "income"],
       income_frequency: ["monthly", "annual", "fixed"],
       service_recurrence: ["monthly", "one_time"],
     },
