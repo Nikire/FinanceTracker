@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { GastosList } from "./_components/GastosList";
 
+export const dynamic = "force-dynamic";
+
 export default async function GastosPage() {
   const supabase = await createClient();
   const { data: gastos } = await supabase

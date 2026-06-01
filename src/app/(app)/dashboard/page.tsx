@@ -4,6 +4,9 @@ import { ResumenCards } from "./_components/ResumenCards";
 import { GraficoBarras } from "./_components/GraficoBarras";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+// Datos por usuario que cambian seguido: siempre renderizar con la DB actual
+export const dynamic = "force-dynamic";
+
 function getProximos30Dias(gastos: { due_date: string; amount: number }[]) {
   const hoy = new Date();
   const limite = new Date();

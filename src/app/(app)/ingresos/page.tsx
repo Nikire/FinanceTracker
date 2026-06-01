@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { IngresosList } from "./_components/IngresosList";
 
+export const dynamic = "force-dynamic";
+
 export default async function IngresosPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
