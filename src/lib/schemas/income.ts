@@ -7,6 +7,7 @@ export const incomeSchema = z.object({
     .positive("El monto debe ser mayor a 0"),
   frequency: z.enum(["monthly", "annual", "fixed"]),
   currency: z.enum(["ARS", "USD"]),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 

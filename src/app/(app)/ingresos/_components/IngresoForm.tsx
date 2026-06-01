@@ -35,9 +35,10 @@ export function IngresoForm({ ingreso, onSuccess }: IngresoFormProps) {
           amount: ingreso.amount,
           frequency: ingreso.frequency,
           currency: (ingreso.currency ?? "ARS") as "ARS" | "USD",
+          color: ingreso.color ?? "#22c55e",
           notes: ingreso.notes ?? "",
         }
-      : { description: "", amount: 0, frequency: "monthly", currency: "ARS", notes: "" },
+      : { description: "", amount: 0, frequency: "monthly", currency: "ARS", color: "#22c55e", notes: "" },
   });
 
   async function onSubmit(values: IncomeFormValues) {
@@ -56,19 +57,38 @@ export function IngresoForm({ ingreso, onSuccess }: IngresoFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descripción</FormLabel>
-              <FormControl>
-                <Input placeholder="Sueldo, freelance, alquiler..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="flex items-end gap-3">
+          <FormField
+            control={form.control}
+            name="color"
+            render={({ field }) => (
+              <FormItem className="shrink-0">
+                <FormLabel>Color</FormLabel>
+                <FormControl>
+                  <input
+                    type="color"
+                    value={field.value ?? "#22c55e"}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="h-9 w-9 cursor-pointer rounded-md border border-input bg-transparent p-0.5"
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Descripción</FormLabel>
+                <FormControl>
+                  <Input placeholder="Sueldo, freelance, alquiler..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
@@ -98,7 +118,7 @@ export function IngresoForm({ ingreso, onSuccess }: IngresoFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Frecuencia</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccioná..." />
@@ -124,7 +144,7 @@ export function IngresoForm({ ingreso, onSuccess }: IngresoFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Moneda</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue />

@@ -144,6 +144,7 @@ export type Database = {
       income: {
         Row: {
           amount: number
+          color: string | null
           created_at: string
           currency: Database["public"]["Enums"]["currency_type"]
           description: string
@@ -155,6 +156,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          color?: string | null
           created_at?: string
           currency?: Database["public"]["Enums"]["currency_type"]
           description: string
@@ -166,6 +168,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          color?: string | null
           created_at?: string
           currency?: Database["public"]["Enums"]["currency_type"]
           description?: string

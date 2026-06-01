@@ -62,17 +62,24 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
   const exchangeRate = exchangeRates.find((r) => r.year === year && r.month === month) ?? null;
   const rate = exchangeRate?.usd_to_ars ?? null;
 
-  const monthlyARS = ingresos
-    .filter((i) => i.frequency === "monthly" && (i.currency ?? "ARS") === "ARS")
-    .reduce((sum, i) => sum + i.amount, 0);
+  function toARS(amount: number, currency: string, r: number | null): number {
+    if (currency === "USD") return r ? amount * r : 0;
+    return amount;
+  }
 
-  const monthlyUSD = ingresos
-    .filter((i) => i.frequency === "monthly" && i.currency === "USD")
-    .reduce((sum, i) => sum + i.amount, 0);
+  // Ingreso mensual recurrente, unificado a ARS con la cotización del mes
+  const monthlyUnifiedARS = ingresos
+    .filter((i) => i.frequency === "monthly")
+    .reduce((sum, i) => sum + toARS(i.amount, i.currency ?? "ARS", rate), 0);
 
-  const monthlyTotalARS = monthlyARS + (rate ? monthlyUSD * rate : 0);
+  // Todos los ingresos (mensual + anual + fijo), unificado a ARS
+  const totalUnifiedARS = ingresos.reduce(
+    (sum, i) => sum + toARS(i.amount, i.currency ?? "ARS", rate),
+    0
+  );
 
-  const hasUSD = ingresos.some((i) => i.currency === "USD");
+  // ¿Hay ingresos en USD que no podemos convertir por falta de cotización?
+  const usdSinCotizar = !rate && ingresos.some((i) => i.currency === "USD");
 
   return (
     <div className="space-y-4">
@@ -118,19 +125,17 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
           </p>
         </div>
         <div className="rounded-lg border bg-card px-4 py-3">
-          <p className="text-xs text-muted-foreground">Mensual ARS</p>
-          <p className="mt-0.5 font-semibold font-mono">{formatCurrency(monthlyARS)}</p>
-          {monthlyUSD > 0 && (
-            <p className="text-xs text-muted-foreground">+ USD {monthlyUSD.toFixed(2)}</p>
-          )}
+          <p className="text-xs text-muted-foreground">Mensual (ARS)</p>
+          <p className="mt-0.5 font-semibold font-mono">{formatCurrency(monthlyUnifiedARS)}</p>
+          <p className="text-xs text-muted-foreground">ingresos recurrentes</p>
         </div>
         <div className="rounded-lg border bg-card px-4 py-3">
-          <p className="text-xs text-muted-foreground">
-            Total ARS{rate && hasUSD ? " (con cotización)" : ""}
-          </p>
-          <p className="mt-0.5 font-semibold font-mono">{formatCurrency(monthlyTotalARS)}</p>
-          {!rate && monthlyUSD > 0 && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">USD no incluido</p>
+          <p className="text-xs text-muted-foreground">Total general (ARS)</p>
+          <p className="mt-0.5 font-semibold font-mono">{formatCurrency(totalUnifiedARS)}</p>
+          {usdSinCotizar ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400">configurá la cotización para incluir USD</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">mensual + anual + fijo</p>
           )}
         </div>
       </div>
@@ -146,6 +151,7 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-2 p-0" />
               <TableHead>Descripción</TableHead>
               <TableHead className="text-center">Frecuencia</TableHead>
               <TableHead className="text-center">Moneda</TableHead>
@@ -158,6 +164,12 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
               const currency = (ingreso.currency ?? "ARS") as "ARS" | "USD";
               return (
                 <TableRow key={ingreso.id}>
+                  <TableCell className="p-0 pl-2">
+                    <div
+                      className="h-10 w-1 rounded-full"
+                      style={{ backgroundColor: ingreso.color ?? "#e5e7eb" }}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div>
                       <p className="font-medium">{ingreso.description}</p>
@@ -167,8 +179,8 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant={FREQUENCY_VARIANTS[ingreso.frequency]}>
-                      {FREQUENCY_LABELS[ingreso.frequency]}
+                    <Badge variant={FREQUENCY_VARIANTS[ingreso.frequency] ?? "outline"}>
+                      {FREQUENCY_LABELS[ingreso.frequency] ?? ingreso.frequency}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">

@@ -15,6 +15,7 @@ export async function createIncome(formData: unknown) {
   const { error } = await supabase.from("income").insert({
     ...parsed.data,
     notes: parsed.data.notes || null,
+    color: parsed.data.color || null,
     currency: parsed.data.currency,
     user_id: user.id,
   });
@@ -34,7 +35,7 @@ export async function updateIncome(id: string, formData: unknown) {
 
   const { error } = await supabase
     .from("income")
-    .update({ ...parsed.data, notes: parsed.data.notes || null })
+    .update({ ...parsed.data, notes: parsed.data.notes || null, color: parsed.data.color || null })
     .eq("id", id)
     .eq("user_id", user.id);
 

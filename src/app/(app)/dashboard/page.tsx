@@ -15,9 +15,32 @@ function getProximos30Dias(gastos: { due_date: string; amount: number }[]) {
     .reduce((sum, g) => sum + g.amount, 0);
 }
 
+// Convierte un monto a ARS unificado usando la cotización del tipo correspondiente
+function toARS(amount: number, currency: string | null, rate: number | null): number {
+  if (currency === "USD") return rate ? amount * rate : 0;
+  return amount;
+}
+
+type ServiceRow = { amount: number; active: boolean; currency: string | null };
+type IngresoRow = { amount: number; frequency: string; currency: string | null };
+
+function sumGastos(services: ServiceRow[], rate: number | null) {
+  return services
+    .filter((s) => s.active)
+    .reduce((sum, s) => sum + toARS(s.amount, s.currency, rate), 0);
+}
+
+function sumIngresosMensuales(ingresos: IngresoRow[], rate: number | null) {
+  return ingresos
+    .filter((i) => i.frequency === "monthly")
+    .reduce((sum, i) => sum + toARS(i.amount, i.currency, rate), 0);
+}
+
 function buildChartData(
-  services: { amount: number; active: boolean }[],
-  ingresos: { amount: number; frequency: string }[]
+  services: ServiceRow[],
+  ingresos: IngresoRow[],
+  serviceRate: number | null,
+  incomeRate: number | null
 ) {
   const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
   const hoy = new Date();
@@ -25,39 +48,45 @@ function buildChartData(
   return Array.from({ length: 6 }, (_, i) => {
     const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - 5 + i, 1);
     const mes = MESES[fecha.getMonth()];
-
-    const gastos = services
-      .filter((s) => s.active)
-      .reduce((sum, s) => sum + s.amount, 0);
-
-    const ingresosTotal = ingresos
-      .filter((ing) => ing.frequency === "monthly")
-      .reduce((sum, ing) => sum + ing.amount, 0);
-
-    return { mes, ingresos: ingresosTotal, gastos };
+    return {
+      mes,
+      ingresos: sumIngresosMensuales(ingresos, incomeRate),
+      gastos: sumGastos(services, serviceRate),
+    };
   });
 }
 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [{ data: services }, { data: gastos }, { data: ingresos }] = await Promise.all([
-    supabase.from("services").select("amount, active"),
-    supabase.from("annual_expenses").select("due_date, amount"),
-    supabase.from("income").select("amount, frequency"),
-  ]);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
 
-  const gastosMensuales = (services ?? [])
-    .filter((s) => s.active)
-    .reduce((sum, s) => sum + s.amount, 0);
+  const [{ data: services }, { data: gastos }, { data: ingresos }, { data: rates }] =
+    await Promise.all([
+      supabase.from("services").select("amount, active, currency"),
+      supabase.from("annual_expenses").select("due_date, amount"),
+      supabase.from("income").select("amount, frequency, currency"),
+      supabase.from("exchange_rates").select("usd_to_ars, kind").eq("year", year).eq("month", month),
+    ]);
 
-  const ingresosMensuales = (ingresos ?? [])
-    .filter((i) => i.frequency === "monthly")
-    .reduce((sum, i) => sum + i.amount, 0);
+  const serviceRate =
+    (rates ?? []).find((r) => r.kind === "service")?.usd_to_ars ?? null;
+  const incomeRate =
+    (rates ?? []).find((r) => r.kind === "income")?.usd_to_ars ?? null;
+
+  const gastosMensuales = sumGastos((services ?? []) as ServiceRow[], serviceRate);
+  const ingresosMensuales = sumIngresosMensuales((ingresos ?? []) as IngresoRow[], incomeRate);
 
   const balance = ingresosMensuales - gastosMensuales;
   const gastosAnualesProximos = getProximos30Dias(gastos ?? []);
-  const chartData = buildChartData(services ?? [], ingresos ?? []);
+  const chartData = buildChartData(
+    (services ?? []) as ServiceRow[],
+    (ingresos ?? []) as IngresoRow[],
+    serviceRate,
+    incomeRate
+  );
 
   return (
     <div className="space-y-6">
