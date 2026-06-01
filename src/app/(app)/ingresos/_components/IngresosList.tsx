@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Tables } from "@/lib/supabase/database.types";
 import { deleteIncome } from "@/lib/actions/income";
 import { formatCurrency } from "@/lib/utils/format";
 import { IngresoForm } from "./IngresoForm";
+import { ExchangeRateBar } from "@/components/shared/ExchangeRateBar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,8 +19,10 @@ import {
 
 interface IngresosListProps {
   ingresos: Tables<"income">[];
-  exchangeRate: Tables<"exchange_rates"> | null;
+  exchangeRates: Tables<"exchange_rates">[];
 }
+
+const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 const FREQUENCY_LABELS: Record<string, string> = {
   monthly: "Mensual",
@@ -33,9 +36,21 @@ const FREQUENCY_VARIANTS: Record<string, "default" | "secondary" | "outline"> = 
   fixed: "outline",
 };
 
-export function IngresosList({ ingresos, exchangeRate }: IngresosListProps) {
+export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
   const [openCreate, setOpenCreate] = useState(false);
   const [editingIngreso, setEditingIngreso] = useState<Tables<"income"> | null>(null);
+
+  function prevMonth() {
+    if (month === 1) { setMonth(12); setYear((y) => y - 1); }
+    else setMonth((m) => m - 1);
+  }
+  function nextMonth() {
+    if (month === 12) { setMonth(1); setYear((y) => y + 1); }
+    else setMonth((m) => m + 1);
+  }
 
   async function handleDelete(id: string, desc: string) {
     if (!confirm(`¿Eliminar "${desc}"?`)) return;
@@ -44,6 +59,7 @@ export function IngresosList({ ingresos, exchangeRate }: IngresosListProps) {
     else toast.success("Ingreso eliminado");
   }
 
+  const exchangeRate = exchangeRates.find((r) => r.year === year && r.month === month) ?? null;
   const rate = exchangeRate?.usd_to_ars ?? null;
 
   const monthlyARS = ingresos
@@ -56,30 +72,22 @@ export function IngresosList({ ingresos, exchangeRate }: IngresosListProps) {
 
   const monthlyTotalARS = monthlyARS + (rate ? monthlyUSD * rate : 0);
 
+  const hasUSD = ingresos.some((i) => i.currency === "USD");
+
   return (
     <div className="space-y-4">
-      {/* Resumen */}
+      {/* Navegador de mes */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <div>
-            <p className="text-xs text-muted-foreground">Mensual ARS</p>
-            <p className="font-semibold font-mono">{formatCurrency(monthlyARS)}</p>
-            {monthlyUSD > 0 && (
-              <p className="text-xs text-muted-foreground">+ USD {monthlyUSD.toFixed(2)}</p>
-            )}
-          </div>
-          {monthlyUSD > 0 && (
-            <div>
-              <p className="text-xs text-muted-foreground">
-                Total ARS{rate ? " (con cotización)" : ""}
-              </p>
-              <p className="font-semibold font-mono">{formatCurrency(monthlyTotalARS)}</p>
-              {!rate && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">USD no incluido</p>
-              )}
-            </div>
-          )}
-          <p className="text-sm text-muted-foreground">{ingresos.length} ingresos</p>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={prevMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="min-w-36 text-center font-medium">
+            {MONTHS[month - 1]} {year}
+          </span>
+          <Button variant="ghost" size="icon" onClick={nextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
 
         <Dialog open={openCreate} onOpenChange={setOpenCreate}>
@@ -94,6 +102,37 @@ export function IngresosList({ ingresos, exchangeRate }: IngresosListProps) {
             <IngresoForm onSuccess={() => setOpenCreate(false)} />
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Tipo de cambio */}
+      <ExchangeRateBar year={year} month={month} rate={exchangeRate} />
+
+      {/* Resumen de totales */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border bg-card px-4 py-3">
+          <p className="text-xs text-muted-foreground">{ingresos.length} ingresos</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {ingresos.filter((i) => i.frequency === "monthly").length} mensuales ·{" "}
+            {ingresos.filter((i) => i.frequency === "annual").length} anuales ·{" "}
+            {ingresos.filter((i) => i.frequency === "fixed").length} fijos
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card px-4 py-3">
+          <p className="text-xs text-muted-foreground">Mensual ARS</p>
+          <p className="mt-0.5 font-semibold font-mono">{formatCurrency(monthlyARS)}</p>
+          {monthlyUSD > 0 && (
+            <p className="text-xs text-muted-foreground">+ USD {monthlyUSD.toFixed(2)}</p>
+          )}
+        </div>
+        <div className="rounded-lg border bg-card px-4 py-3">
+          <p className="text-xs text-muted-foreground">
+            Total ARS{rate && hasUSD ? " (con cotización)" : ""}
+          </p>
+          <p className="mt-0.5 font-semibold font-mono">{formatCurrency(monthlyTotalARS)}</p>
+          {!rate && monthlyUSD > 0 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">USD no incluido</p>
+          )}
+        </div>
       </div>
 
       {ingresos.length === 0 ? (

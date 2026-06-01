@@ -5,19 +5,9 @@ export default async function IngresosPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-
-  const [{ data: ingresos }, { data: exchangeRate }] = await Promise.all([
+  const [{ data: ingresos }, { data: exchangeRates }] = await Promise.all([
     supabase.from("income").select("*").order("description"),
-    supabase
-      .from("exchange_rates")
-      .select("*")
-      .eq("user_id", user!.id)
-      .eq("year", year)
-      .eq("month", month)
-      .maybeSingle(),
+    supabase.from("exchange_rates").select("*").eq("user_id", user!.id),
   ]);
 
   return (
@@ -28,7 +18,7 @@ export default async function IngresosPage() {
           Ingresos mensuales, anuales y fijos
         </p>
       </div>
-      <IngresosList ingresos={ingresos ?? []} exchangeRate={exchangeRate ?? null} />
+      <IngresosList ingresos={ingresos ?? []} exchangeRates={exchangeRates ?? []} />
     </div>
   );
 }
