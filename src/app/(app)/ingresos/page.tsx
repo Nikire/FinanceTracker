@@ -3,10 +3,22 @@ import { IngresosList } from "./_components/IngresosList";
 
 export default async function IngresosPage() {
   const supabase = await createClient();
-  const { data: ingresos } = await supabase
-    .from("income")
-    .select("*")
-    .order("description");
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  const [{ data: ingresos }, { data: exchangeRate }] = await Promise.all([
+    supabase.from("income").select("*").order("description"),
+    supabase
+      .from("exchange_rates")
+      .select("*")
+      .eq("user_id", user!.id)
+      .eq("year", year)
+      .eq("month", month)
+      .maybeSingle(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -16,7 +28,7 @@ export default async function IngresosPage() {
           Ingresos mensuales, anuales y fijos
         </p>
       </div>
-      <IngresosList ingresos={ingresos ?? []} />
+      <IngresosList ingresos={ingresos ?? []} exchangeRate={exchangeRate ?? null} />
     </div>
   );
 }

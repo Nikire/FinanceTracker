@@ -18,6 +18,7 @@ import {
 
 interface IngresosListProps {
   ingresos: Tables<"income">[];
+  exchangeRate: Tables<"exchange_rates"> | null;
 }
 
 const FREQUENCY_LABELS: Record<string, string> = {
@@ -32,7 +33,7 @@ const FREQUENCY_VARIANTS: Record<string, "default" | "secondary" | "outline"> = 
   fixed: "outline",
 };
 
-export function IngresosList({ ingresos }: IngresosListProps) {
+export function IngresosList({ ingresos, exchangeRate }: IngresosListProps) {
   const [openCreate, setOpenCreate] = useState(false);
   const [editingIngreso, setEditingIngreso] = useState<Tables<"income"> | null>(null);
 
@@ -43,6 +44,8 @@ export function IngresosList({ ingresos }: IngresosListProps) {
     else toast.success("Ingreso eliminado");
   }
 
+  const rate = exchangeRate?.usd_to_ars ?? null;
+
   const monthlyARS = ingresos
     .filter((i) => i.frequency === "monthly" && (i.currency ?? "ARS") === "ARS")
     .reduce((sum, i) => sum + i.amount, 0);
@@ -51,16 +54,33 @@ export function IngresosList({ ingresos }: IngresosListProps) {
     .filter((i) => i.frequency === "monthly" && i.currency === "USD")
     .reduce((sum, i) => sum + i.amount, 0);
 
+  const monthlyTotalARS = monthlyARS + (rate ? monthlyUSD * rate : 0);
+
   return (
     <div className="space-y-4">
+      {/* Resumen */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {ingresos.length} ingresos · Mensual:{" "}
-          <span className="font-semibold text-foreground">{formatCurrency(monthlyARS)}</span>
+        <div className="flex items-center gap-6">
+          <div>
+            <p className="text-xs text-muted-foreground">Mensual ARS</p>
+            <p className="font-semibold font-mono">{formatCurrency(monthlyARS)}</p>
+            {monthlyUSD > 0 && (
+              <p className="text-xs text-muted-foreground">+ USD {monthlyUSD.toFixed(2)}</p>
+            )}
+          </div>
           {monthlyUSD > 0 && (
-            <span className="font-semibold text-foreground"> + USD {monthlyUSD.toFixed(2)}</span>
+            <div>
+              <p className="text-xs text-muted-foreground">
+                Total ARS{rate ? " (con cotización)" : ""}
+              </p>
+              <p className="font-semibold font-mono">{formatCurrency(monthlyTotalARS)}</p>
+              {!rate && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">USD no incluido</p>
+              )}
+            </div>
           )}
-        </p>
+          <p className="text-sm text-muted-foreground">{ingresos.length} ingresos</p>
+        </div>
 
         <Dialog open={openCreate} onOpenChange={setOpenCreate}>
           <DialogTrigger render={<Button size="sm" />}>
@@ -98,70 +118,79 @@ export function IngresosList({ ingresos }: IngresosListProps) {
             {ingresos.map((ingreso) => {
               const currency = (ingreso.currency ?? "ARS") as "ARS" | "USD";
               return (
-              <TableRow key={ingreso.id}>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{ingreso.description}</p>
-                    {ingreso.notes && (
-                      <p className="text-xs text-muted-foreground">{ingreso.notes}</p>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant={FREQUENCY_VARIANTS[ingreso.frequency]}>
-                    {FREQUENCY_LABELS[ingreso.frequency]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant={currency === "USD" ? "default" : "outline"} className="text-xs">
-                    {currency}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {currency === "USD"
-                    ? `USD ${ingreso.amount.toFixed(2)}`
-                    : formatCurrency(ingreso.amount)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Dialog
-                      open={editingIngreso?.id === ingreso.id}
-                      onOpenChange={(open) => !open && setEditingIngreso(null)}
-                    >
-                      <DialogTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditingIngreso(ingreso)}
-                          />
-                        }
+                <TableRow key={ingreso.id}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{ingreso.description}</p>
+                      {ingreso.notes && (
+                        <p className="text-xs text-muted-foreground">{ingreso.notes}</p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={FREQUENCY_VARIANTS[ingreso.frequency]}>
+                      {FREQUENCY_LABELS[ingreso.frequency]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={currency === "USD" ? "default" : "outline"} className="text-xs">
+                      {currency}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    <div>
+                      <span>
+                        {currency === "USD"
+                          ? `USD ${ingreso.amount.toFixed(2)}`
+                          : formatCurrency(ingreso.amount)}
+                      </span>
+                      {currency === "USD" && rate && (
+                        <p className="text-xs text-muted-foreground">
+                          ≈ {formatCurrency(ingreso.amount * rate)}
+                        </p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Dialog
+                        open={editingIngreso?.id === ingreso.id}
+                        onOpenChange={(open) => !open && setEditingIngreso(null)}
                       >
-                        <Pencil className="h-4 w-4" />
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Editar ingreso</DialogTitle>
-                        </DialogHeader>
-                        <IngresoForm
-                          ingreso={ingreso}
-                          onSuccess={() => setEditingIngreso(null)}
-                        />
-                      </DialogContent>
-                    </Dialog>
+                        <DialogTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditingIngreso(ingreso)}
+                            />
+                          }
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Editar ingreso</DialogTitle>
+                          </DialogHeader>
+                          <IngresoForm
+                            ingreso={ingreso}
+                            onSuccess={() => setEditingIngreso(null)}
+                          />
+                        </DialogContent>
+                      </Dialog>
 
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(ingreso.id, ingreso.description)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-})}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(ingreso.id, ingreso.description)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}

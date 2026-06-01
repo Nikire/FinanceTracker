@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pencil, Check, X } from "lucide-react";
 import { upsertExchangeRate } from "@/lib/actions/services";
@@ -18,6 +19,7 @@ interface ExchangeRateBarProps {
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 export function ExchangeRateBar({ year, month, rate }: ExchangeRateBarProps) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(rate?.usd_to_ars?.toString() ?? "");
   const [loading, setLoading] = useState(false);
@@ -37,12 +39,18 @@ export function ExchangeRateBar({ year, month, rate }: ExchangeRateBarProps) {
     }
     toast.success("Tipo de cambio actualizado");
     setEditing(false);
+    router.refresh();
+  }
+
+  function handleEdit() {
+    setValue(rate?.usd_to_ars?.toString() ?? "");
+    setEditing(true);
   }
 
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-2.5 text-sm">
       <span className="text-muted-foreground">
-        Tipo de cambio {MONTHS[month - 1]} {year}:
+        USD/ARS {MONTHS[month - 1]} {year}:
       </span>
 
       {editing ? (
@@ -68,13 +76,15 @@ export function ExchangeRateBar({ year, month, rate }: ExchangeRateBarProps) {
         </div>
       ) : rate ? (
         <div className="flex items-center gap-2">
-          <span className="font-medium">USD 1 = {formatCurrency(rate.usd_to_ars)}</span>
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setValue(rate.usd_to_ars.toString()); setEditing(true); }}>
+          <span className="font-semibold">
+            USD 1 = {formatCurrency(rate.usd_to_ars)}
+          </span>
+          <Button size="icon" variant="ghost" className="h-7 w-7 cursor-pointer" onClick={handleEdit}>
             <Pencil className="h-3.5 w-3.5" />
           </Button>
         </div>
       ) : (
-        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditing(true)}>
+        <Button size="sm" variant="outline" className="h-7 cursor-pointer text-xs" onClick={() => setEditing(true)}>
           Configurar
         </Button>
       )}

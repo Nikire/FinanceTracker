@@ -12,13 +12,7 @@ export default async function ServiciosPage() {
   const [{ data: services }, { data: records }, { data: exchangeRates }] = await Promise.all([
     supabase.from("services").select("*").order("name"),
     supabase.from("service_monthly_records").select("*").eq("user_id", user!.id),
-    supabase
-      .from("exchange_rates")
-      .select("*")
-      .eq("user_id", user!.id)
-      .eq("year", year)
-      .eq("month", month)
-      .maybeSingle(),
+    supabase.from("exchange_rates").select("*").eq("user_id", user!.id),
   ]);
 
   return (
@@ -32,7 +26,7 @@ export default async function ServiciosPage() {
       <ServiciosList
         services={services ?? []}
         records={records ?? []}
-        exchangeRate={exchangeRates ?? null}
+        exchangeRates={exchangeRates ?? []}
       />
     </div>
   );

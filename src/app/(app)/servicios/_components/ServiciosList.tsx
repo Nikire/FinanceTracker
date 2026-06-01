@@ -28,7 +28,7 @@ import {
 interface ServiciosListProps {
   services: Tables<"services">[];
   records: Tables<"service_monthly_records">[];
-  exchangeRate: Tables<"exchange_rates"> | null;
+  exchangeRates: Tables<"exchange_rates">[];
 }
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -82,7 +82,7 @@ function toARS(amount: number, currency: string, rate: number | null): number {
   return amount;
 }
 
-export function ServiciosList({ services, records, exchangeRate }: ServiciosListProps) {
+export function ServiciosList({ services, records, exchangeRates }: ServiciosListProps) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -92,6 +92,7 @@ export function ServiciosList({ services, records, exchangeRate }: ServiciosList
   const [initializing, setInitializing] = useState(false);
 
   const isFuture = isFutureMonth(year, month);
+  const exchangeRate = exchangeRates.find((r) => r.year === year && r.month === month) ?? null;
   const rate = exchangeRate?.usd_to_ars ?? null;
 
   // Registros del mes actual
@@ -225,10 +226,17 @@ export function ServiciosList({ services, records, exchangeRate }: ServiciosList
           )}
         </div>
         <div className="rounded-lg border bg-card px-4 py-3">
-          <p className="text-xs text-muted-foreground">Total estimado en ARS</p>
-          <p className={`mt-0.5 font-semibold font-mono ${!rate && totalUSD > 0 ? "text-amber-600" : ""}`}>
-            {rate || totalUSD === 0 ? formatCurrency(totalEstimado) : `${formatCurrency(totalARS)} + USD sin cotización`}
+          <p className="text-xs text-muted-foreground">
+            Total en ARS{rate && totalUSD > 0 ? " (con cotización)" : ""}
           </p>
+          <p className="mt-0.5 font-semibold font-mono">
+            {formatCurrency(totalEstimado)}
+          </p>
+          {!rate && totalUSD > 0 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              USD no incluido — configurá cotización
+            </p>
+          )}
         </div>
       </div>
 
