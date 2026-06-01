@@ -142,6 +142,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          currency: Database["public"]["Enums"]["currency_type"]
           description: string
           frequency: Database["public"]["Enums"]["income_frequency"]
           id: string
@@ -152,6 +153,7 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
           description: string
           frequency: Database["public"]["Enums"]["income_frequency"]
           id?: string
@@ -162,6 +164,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
           description?: string
           frequency?: Database["public"]["Enums"]["income_frequency"]
           id?: string
@@ -171,43 +174,55 @@ export type Database = {
         }
         Relationships: []
       }
-      service_payments: {
+      service_monthly_records: {
         Row: {
+          amount: number | null
           created_at: string
+          currency: Database["public"]["Enums"]["currency_type"] | null
           id: string
           is_active: boolean | null
           is_paid: boolean
           month: number
+          notes: string | null
           paid_at: string | null
           service_id: string
+          updated_at: string
           user_id: string
           year: number
         }
         Insert: {
+          amount?: number | null
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"] | null
           id?: string
           is_active?: boolean | null
           is_paid?: boolean
           month: number
+          notes?: string | null
           paid_at?: string | null
           service_id: string
+          updated_at?: string
           user_id: string
           year: number
         }
         Update: {
+          amount?: number | null
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"] | null
           id?: string
           is_active?: boolean | null
           is_paid?: boolean
           month?: number
+          notes?: string | null
           paid_at?: string | null
           service_id?: string
+          updated_at?: string
           user_id?: string
           year?: number
         }
         Relationships: [
           {
-            foreignKeyName: "service_payments_service_id_fkey"
+            foreignKeyName: "service_monthly_records_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
@@ -227,6 +242,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          recurrence: Database["public"]["Enums"]["service_recurrence"]
           updated_at: string
           user_id: string
         }
@@ -241,6 +257,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          recurrence?: Database["public"]["Enums"]["service_recurrence"]
           updated_at?: string
           user_id: string
         }
@@ -255,6 +272,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          recurrence?: Database["public"]["Enums"]["service_recurrence"]
           updated_at?: string
           user_id?: string
         }
@@ -271,6 +289,7 @@ export type Database = {
       attachment_entity: "service" | "annual_expense" | "income"
       currency_type: "ARS" | "USD"
       income_frequency: "monthly" | "annual" | "fixed"
+      service_recurrence: "monthly" | "one_time"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -404,6 +423,7 @@ export const Constants = {
       attachment_entity: ["service", "annual_expense", "income"],
       currency_type: ["ARS", "USD"],
       income_frequency: ["monthly", "annual", "fixed"],
+      service_recurrence: ["monthly", "one_time"],
     },
   },
 } as const

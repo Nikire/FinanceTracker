@@ -9,9 +9,9 @@ export default async function ServiciosPage() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const [{ data: services }, { data: payments }, { data: exchangeRates }] = await Promise.all([
+  const [{ data: services }, { data: records }, { data: exchangeRates }] = await Promise.all([
     supabase.from("services").select("*").order("name"),
-    supabase.from("service_payments").select("*").eq("user_id", user!.id),
+    supabase.from("service_monthly_records").select("*").eq("user_id", user!.id),
     supabase
       .from("exchange_rates")
       .select("*")
@@ -31,7 +31,7 @@ export default async function ServiciosPage() {
       </div>
       <ServiciosList
         services={services ?? []}
-        payments={payments ?? []}
+        records={records ?? []}
         exchangeRate={exchangeRates ?? null}
       />
     </div>

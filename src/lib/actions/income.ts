@@ -15,6 +15,7 @@ export async function createIncome(formData: unknown) {
   const { error } = await supabase.from("income").insert({
     ...parsed.data,
     notes: parsed.data.notes || null,
+    currency: parsed.data.currency,
     user_id: user.id,
   });
 

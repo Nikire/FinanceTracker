@@ -34,9 +34,10 @@ export function IngresoForm({ ingreso, onSuccess }: IngresoFormProps) {
           description: ingreso.description,
           amount: ingreso.amount,
           frequency: ingreso.frequency,
+          currency: (ingreso.currency ?? "ARS") as "ARS" | "USD",
           notes: ingreso.notes ?? "",
         }
-      : { description: "", amount: 0, frequency: "monthly", notes: "" },
+      : { description: "", amount: 0, frequency: "monthly", currency: "ARS", notes: "" },
   });
 
   async function onSubmit(values: IncomeFormValues) {
@@ -75,7 +76,7 @@ export function IngresoForm({ ingreso, onSuccess }: IngresoFormProps) {
             name="amount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Monto ($)</FormLabel>
+                <FormLabel>Monto</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -116,6 +117,28 @@ export function IngresoForm({ ingreso, onSuccess }: IngresoFormProps) {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="currency"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Moneda</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="ARS">ARS — Peso argentino</SelectItem>
+                  <SelectItem value="USD">USD — Dólar</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

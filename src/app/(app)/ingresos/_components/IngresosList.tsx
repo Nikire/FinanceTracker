@@ -43,16 +43,23 @@ export function IngresosList({ ingresos }: IngresosListProps) {
     else toast.success("Ingreso eliminado");
   }
 
-  const monthlyTotal = ingresos
-    .filter((i) => i.frequency === "monthly")
+  const monthlyARS = ingresos
+    .filter((i) => i.frequency === "monthly" && (i.currency ?? "ARS") === "ARS")
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  const monthlyUSD = ingresos
+    .filter((i) => i.frequency === "monthly" && i.currency === "USD")
     .reduce((sum, i) => sum + i.amount, 0);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {ingresos.length} ingresos · Mensual recurrente:{" "}
-          <span className="font-semibold text-foreground">{formatCurrency(monthlyTotal)}</span>
+          {ingresos.length} ingresos · Mensual:{" "}
+          <span className="font-semibold text-foreground">{formatCurrency(monthlyARS)}</span>
+          {monthlyUSD > 0 && (
+            <span className="font-semibold text-foreground"> + USD {monthlyUSD.toFixed(2)}</span>
+          )}
         </p>
 
         <Dialog open={openCreate} onOpenChange={setOpenCreate}>
@@ -82,12 +89,15 @@ export function IngresosList({ ingresos }: IngresosListProps) {
             <TableRow>
               <TableHead>Descripción</TableHead>
               <TableHead className="text-center">Frecuencia</TableHead>
+              <TableHead className="text-center">Moneda</TableHead>
               <TableHead className="text-right">Monto</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ingresos.map((ingreso) => (
+            {ingresos.map((ingreso) => {
+              const currency = (ingreso.currency ?? "ARS") as "ARS" | "USD";
+              return (
               <TableRow key={ingreso.id}>
                 <TableCell>
                   <div>
@@ -102,8 +112,15 @@ export function IngresosList({ ingresos }: IngresosListProps) {
                     {FREQUENCY_LABELS[ingreso.frequency]}
                   </Badge>
                 </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant={currency === "USD" ? "default" : "outline"} className="text-xs">
+                    {currency}
+                  </Badge>
+                </TableCell>
                 <TableCell className="text-right font-mono">
-                  {formatCurrency(ingreso.amount)}
+                  {currency === "USD"
+                    ? `USD ${ingreso.amount.toFixed(2)}`
+                    : formatCurrency(ingreso.amount)}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
@@ -143,7 +160,8 @@ export function IngresosList({ ingresos }: IngresosListProps) {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            );
+})}
           </TableBody>
         </Table>
       )}

@@ -11,9 +11,19 @@ export const serviceSchema = z.object({
     .min(1, "El día debe ser entre 1 y 31")
     .max(31, "El día debe ser entre 1 y 31"),
   currency: z.enum(["ARS", "USD"]),
+  recurrence: z.enum(["monthly", "one_time"]),
   auto_debit: z.boolean(),
   active: z.boolean(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  notes: z.string().max(500).optional().or(z.literal("")),
+});
+
+export const monthlyRecordSchema = z.object({
+  amount: z
+    .number({ error: "Ingresá un monto válido" })
+    .positive("El monto debe ser mayor a 0")
+    .optional(),
+  currency: z.enum(["ARS", "USD"]).optional(),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 

@@ -6,6 +6,7 @@ export const incomeSchema = z.object({
     .number({ error: "Ingresá un monto válido" })
     .positive("El monto debe ser mayor a 0"),
   frequency: z.enum(["monthly", "annual", "fixed"]),
+  currency: z.enum(["ARS", "USD"]),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 

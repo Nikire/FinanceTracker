@@ -30,12 +30,13 @@ export function ServiceForm({ service, onSuccess }: ServiceFormProps) {
           amount: service.amount,
           debit_day: service.debit_day,
           currency: service.currency as "ARS" | "USD",
+          recurrence: service.recurrence as "monthly" | "one_time",
           auto_debit: service.auto_debit,
           active: service.active,
           color: service.color ?? "#6366f1",
           notes: service.notes ?? "",
         }
-      : { name: "", amount: 0, debit_day: 1, currency: "ARS", auto_debit: false, active: true, color: "#6366f1", notes: "" },
+      : { name: "", amount: 0, debit_day: 1, currency: "ARS", recurrence: "monthly", auto_debit: false, active: true, color: "#6366f1", notes: "" },
   });
 
   async function onSubmit(values: ServiceFormValues) {
@@ -162,6 +163,28 @@ export function ServiceForm({ service, onSuccess }: ServiceFormProps) {
               <FormControl>
                 <Input placeholder="Observaciones..." {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="recurrence"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Recurrencia</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="monthly">Mensual — se copia al mes siguiente</SelectItem>
+                  <SelectItem value="one_time">Único — no se copia</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
