@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { Tables } from "@/lib/supabase/database.types";
 import { ResumenCards } from "./_components/ResumenCards";
 import { GraficoBarras } from "./_components/GraficoBarras";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,52 +22,79 @@ function toARS(amount: number, currency: string | null, rate: number | null): nu
   return amount;
 }
 
-type ServiceRow = { amount: number; active: boolean; currency: string | null };
-type IngresoRow = { amount: number; frequency: string; currency: string | null };
+type ServiceRow = { id: string; amount: number; active: boolean; currency: string | null };
+type RecordRow = Tables<"service_monthly_records">;
+type IngresoRow = { amount: number; currency: string | null; year: number; month: number };
+type RateRow = { usd_to_ars: number; kind: string; year: number; month: number };
 
-function sumGastos(services: ServiceRow[], rate: number | null) {
-  return services
-    .filter((s) => s.active)
-    .reduce((sum, s) => sum + toARS(s.amount, s.currency, rate), 0);
+const ym = (year: number, month: number) => year * 12 + month;
+
+// Cotización del mes: exacta, o la más reciente cargada hasta ese mes, o la primera disponible
+function rateFor(rates: RateRow[], kind: string, year: number, month: number): number | null {
+  const ofKind = rates
+    .filter((r) => r.kind === kind)
+    .sort((a, b) => ym(a.year, a.month) - ym(b.year, b.month));
+  const exact = ofKind.find((r) => r.year === year && r.month === month);
+  if (exact) return exact.usd_to_ars;
+  const before = ofKind.filter((r) => ym(r.year, r.month) <= ym(year, month));
+  if (before.length) return before[before.length - 1].usd_to_ars;
+  return ofKind[0]?.usd_to_ars ?? null;
 }
 
-// Suma todos los ingresos (mensual + anual + fijo) unificados a ARS
-function sumIngresos(ingresos: IngresoRow[], rate: number | null) {
-  return ingresos.reduce((sum, i) => sum + toARS(i.amount, i.currency, rate), 0);
+// Estado activo efectivo de un servicio en un mes (busca hacia atrás, cae en service.active)
+function effectiveActive(service: ServiceRow, records: RecordRow[], year: number, month: number): boolean {
+  const relevant = records
+    .filter((r) => r.service_id === service.id && r.is_active !== null)
+    .filter((r) => r.year < year || (r.year === year && r.month <= month))
+    .sort((a, b) => b.year - a.year || b.month - a.month);
+  if (relevant.length > 0) return relevant[0].is_active!;
+  return service.active;
 }
 
-// Cotización efectiva: la del mes actual o, si no existe, la más reciente cargada
-function resolveRate(
-  rates: { usd_to_ars: number; kind: string; year: number; month: number }[],
-  kind: string,
+// Gastos del mes: servicios activos, con monto/moneda efectivos y cotización saliente del mes
+function gastosDelMes(
+  services: ServiceRow[],
+  records: RecordRow[],
+  rates: RateRow[],
   year: number,
   month: number
-): number | null {
-  const ofKind = rates.filter((r) => r.kind === kind);
-  const current = ofKind.find((r) => r.year === year && r.month === month);
-  if (current) return current.usd_to_ars;
-  const latest = ofKind
-    .slice()
-    .sort((a, b) => b.year * 12 + b.month - (a.year * 12 + a.month))[0];
-  return latest?.usd_to_ars ?? null;
+): number {
+  const rate = rateFor(rates, "service", year, month);
+  return services
+    .filter((s) => effectiveActive(s, records, year, month))
+    .reduce((sum, s) => {
+      const rec = records.find((r) => r.service_id === s.id && r.year === year && r.month === month);
+      const amount = rec?.amount ?? s.amount;
+      const currency = rec?.currency ?? s.currency;
+      return sum + toARS(amount, currency, rate);
+    }, 0);
+}
+
+// Ingresos del mes (pertenecen a un mes específico), unificados con la cotización entrante del mes
+function ingresosDelMes(ingresos: IngresoRow[], rates: RateRow[], year: number, month: number): number {
+  const rate = rateFor(rates, "income", year, month);
+  return ingresos
+    .filter((i) => i.year === year && i.month === month)
+    .reduce((sum, i) => sum + toARS(i.amount, i.currency, rate), 0);
 }
 
 function buildChartData(
   services: ServiceRow[],
+  records: RecordRow[],
   ingresos: IngresoRow[],
-  serviceRate: number | null,
-  incomeRate: number | null
+  rates: RateRow[]
 ) {
   const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
   const hoy = new Date();
 
   return Array.from({ length: 6 }, (_, i) => {
     const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - 5 + i, 1);
-    const mes = MESES[fecha.getMonth()];
+    const y = fecha.getFullYear();
+    const m = fecha.getMonth() + 1;
     return {
-      mes,
-      ingresos: sumIngresos(ingresos, incomeRate),
-      gastos: sumGastos(services, serviceRate),
+      mes: MESES[fecha.getMonth()],
+      ingresos: ingresosDelMes(ingresos, rates, y, m),
+      gastos: gastosDelMes(services, records, rates, y, m),
     };
   });
 }
@@ -78,32 +106,31 @@ export default async function DashboardPage() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const [{ data: services }, { data: gastos }, { data: ingresos }, { data: rates }] =
-    await Promise.all([
-      supabase.from("services").select("amount, active, currency"),
-      supabase.from("annual_expenses").select("due_date, amount"),
-      supabase
-        .from("income")
-        .select("amount, frequency, currency")
-        .eq("year", year)
-        .eq("month", month),
-      supabase.from("exchange_rates").select("usd_to_ars, kind, year, month"),
-    ]);
+  const [
+    { data: services },
+    { data: records },
+    { data: gastos },
+    { data: ingresos },
+    { data: rates },
+  ] = await Promise.all([
+    supabase.from("services").select("id, amount, active, currency"),
+    supabase.from("service_monthly_records").select("*"),
+    supabase.from("annual_expenses").select("due_date, amount"),
+    supabase.from("income").select("amount, currency, year, month"),
+    supabase.from("exchange_rates").select("usd_to_ars, kind, year, month"),
+  ]);
 
-  const serviceRate = resolveRate(rates ?? [], "service", year, month);
-  const incomeRate = resolveRate(rates ?? [], "income", year, month);
+  const serviceList = (services ?? []) as ServiceRow[];
+  const recordList = (records ?? []) as RecordRow[];
+  const ingresoList = (ingresos ?? []) as IngresoRow[];
+  const rateList = (rates ?? []) as RateRow[];
 
-  const gastosMensuales = sumGastos((services ?? []) as ServiceRow[], serviceRate);
-  const ingresosMensuales = sumIngresos((ingresos ?? []) as IngresoRow[], incomeRate);
+  const gastosMensuales = gastosDelMes(serviceList, recordList, rateList, year, month);
+  const ingresosMensuales = ingresosDelMes(ingresoList, rateList, year, month);
 
   const balance = ingresosMensuales - gastosMensuales;
   const gastosAnualesProximos = getProximos30Dias(gastos ?? []);
-  const chartData = buildChartData(
-    (services ?? []) as ServiceRow[],
-    (ingresos ?? []) as IngresoRow[],
-    serviceRate,
-    incomeRate
-  );
+  const chartData = buildChartData(serviceList, recordList, ingresoList, rateList);
 
   return (
     <div className="space-y-6">
