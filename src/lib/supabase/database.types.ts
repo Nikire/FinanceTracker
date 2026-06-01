@@ -108,6 +108,36 @@ export type Database = {
         }
         Relationships: []
       }
+      exchange_rates: {
+        Row: {
+          created_at: string
+          id: string
+          month: number
+          updated_at: string
+          usd_to_ars: number
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month: number
+          updated_at?: string
+          usd_to_ars: number
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month?: number
+          updated_at?: string
+          usd_to_ars?: number
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       income: {
         Row: {
           amount: number
@@ -141,11 +171,54 @@ export type Database = {
         }
         Relationships: []
       }
+      service_payments: {
+        Row: {
+          created_at: string
+          id: string
+          is_paid: boolean
+          month: number
+          paid_at: string | null
+          service_id: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_paid?: boolean
+          month: number
+          paid_at?: string | null
+          service_id: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_paid?: boolean
+          month?: number
+          paid_at?: string | null
+          service_id?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_payments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           active: boolean
           amount: number
+          auto_debit: boolean
           created_at: string
+          currency: Database["public"]["Enums"]["currency_type"]
           debit_day: number
           id: string
           name: string
@@ -156,7 +229,9 @@ export type Database = {
         Insert: {
           active?: boolean
           amount: number
+          auto_debit?: boolean
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
           debit_day: number
           id?: string
           name: string
@@ -167,7 +242,9 @@ export type Database = {
         Update: {
           active?: boolean
           amount?: number
+          auto_debit?: boolean
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
           debit_day?: number
           id?: string
           name?: string
@@ -186,6 +263,7 @@ export type Database = {
     }
     Enums: {
       attachment_entity: "service" | "annual_expense" | "income"
+      currency_type: "ARS" | "USD"
       income_frequency: "monthly" | "annual" | "fixed"
     }
     CompositeTypes: {
@@ -318,6 +396,7 @@ export const Constants = {
   public: {
     Enums: {
       attachment_entity: ["service", "annual_expense", "income"],
+      currency_type: ["ARS", "USD"],
       income_frequency: ["monthly", "annual", "fixed"],
     },
   },

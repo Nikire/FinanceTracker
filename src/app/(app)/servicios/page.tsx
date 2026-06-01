@@ -3,10 +3,23 @@ import { ServiciosList } from "./_components/ServiciosList";
 
 export default async function ServiciosPage() {
   const supabase = await createClient();
-  const { data: services } = await supabase
-    .from("services")
-    .select("*")
-    .order("name");
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  const [{ data: services }, { data: payments }, { data: exchangeRates }] = await Promise.all([
+    supabase.from("services").select("*").order("name"),
+    supabase.from("service_payments").select("*").eq("user_id", user!.id),
+    supabase
+      .from("exchange_rates")
+      .select("*")
+      .eq("user_id", user!.id)
+      .eq("year", year)
+      .eq("month", month)
+      .maybeSingle(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -16,7 +29,11 @@ export default async function ServiciosPage() {
           Gastos mensuales fijos y recurrentes
         </p>
       </div>
-      <ServiciosList services={services ?? []} />
+      <ServiciosList
+        services={services ?? []}
+        payments={payments ?? []}
+        exchangeRate={exchangeRates ?? null}
+      />
     </div>
   );
 }
