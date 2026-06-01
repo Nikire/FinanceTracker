@@ -103,6 +103,28 @@ export async function togglePayment(
   return { success: true };
 }
 
+export async function setMonthlyActive(
+  serviceId: string,
+  year: number,
+  month: number,
+  isActive: boolean
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "No autenticado" };
+
+  const { error } = await supabase
+    .from("service_payments")
+    .upsert(
+      { service_id: serviceId, user_id: user.id, year, month, is_active: isActive },
+      { onConflict: "service_id,year,month" }
+    );
+
+  if (error) return { error: error.message };
+  revalidatePath("/servicios");
+  return { success: true };
+}
+
 export async function autoMarkPaidForMonth(year: number, month: number) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

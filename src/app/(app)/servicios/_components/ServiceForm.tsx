@@ -32,9 +32,10 @@ export function ServiceForm({ service, onSuccess }: ServiceFormProps) {
           currency: service.currency as "ARS" | "USD",
           auto_debit: service.auto_debit,
           active: service.active,
+          color: service.color ?? "#6366f1",
           notes: service.notes ?? "",
         }
-      : { name: "", amount: 0, debit_day: 1, currency: "ARS", auto_debit: false, active: true, notes: "" },
+      : { name: "", amount: 0, debit_day: 1, currency: "ARS", auto_debit: false, active: true, color: "#6366f1", notes: "" },
   });
 
   async function onSubmit(values: ServiceFormValues) {
@@ -53,19 +54,38 @@ export function ServiceForm({ service, onSuccess }: ServiceFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nombre</FormLabel>
-              <FormControl>
-                <Input placeholder="Netflix, Spotify..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="flex items-end gap-3">
+          <FormField
+            control={form.control}
+            name="color"
+            render={({ field }) => (
+              <FormItem className="shrink-0">
+                <FormLabel>Color</FormLabel>
+                <FormControl>
+                  <input
+                    type="color"
+                    value={field.value ?? "#6366f1"}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="h-9 w-9 cursor-pointer rounded-md border border-input bg-transparent p-0.5"
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Nombre</FormLabel>
+                <FormControl>
+                  <Input placeholder="Netflix, Spotify..." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <FormField

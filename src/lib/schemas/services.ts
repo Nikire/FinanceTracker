@@ -13,6 +13,7 @@ export const serviceSchema = z.object({
   currency: z.enum(["ARS", "USD"]),
   auto_debit: z.boolean(),
   active: z.boolean(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 

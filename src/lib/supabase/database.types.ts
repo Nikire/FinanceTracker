@@ -175,6 +175,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_active: boolean | null
           is_paid: boolean
           month: number
           paid_at: string | null
@@ -185,6 +186,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_active?: boolean | null
           is_paid?: boolean
           month: number
           paid_at?: string | null
@@ -195,6 +197,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_active?: boolean | null
           is_paid?: boolean
           month?: number
           paid_at?: string | null
@@ -217,6 +220,7 @@ export type Database = {
           active: boolean
           amount: number
           auto_debit: boolean
+          color: string | null
           created_at: string
           currency: Database["public"]["Enums"]["currency_type"]
           debit_day: number
@@ -230,6 +234,7 @@ export type Database = {
           active?: boolean
           amount: number
           auto_debit?: boolean
+          color?: string | null
           created_at?: string
           currency?: Database["public"]["Enums"]["currency_type"]
           debit_day: number
@@ -243,6 +248,7 @@ export type Database = {
           active?: boolean
           amount?: number
           auto_debit?: boolean
+          color?: string | null
           created_at?: string
           currency?: Database["public"]["Enums"]["currency_type"]
           debit_day?: number
