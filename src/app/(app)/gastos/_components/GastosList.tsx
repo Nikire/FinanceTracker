@@ -9,9 +9,13 @@ import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { GastoForm } from "./GastoForm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { GroupTags, type GroupOption } from "@/components/shared/GroupTags";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -19,10 +23,13 @@ import {
 interface GastosListProps {
   gastos: Tables<"annual_expenses">[];
   rate: number | null;
+  groups: GroupOption[];
+  memberMap: Record<string, string[]>;
 }
 
-export function GastosList({ gastos, rate }: GastosListProps) {
+export function GastosList({ gastos, rate, groups, memberMap }: GastosListProps) {
   const [openCreate, setOpenCreate] = useState(false);
+  const [groupFilter, setGroupFilter] = useState<string>("all");
   const [editingGasto, setEditingGasto] = useState<Tables<"annual_expenses"> | null>(null);
 
   async function handleDelete(id: string, name: string) {
@@ -43,6 +50,10 @@ export function GastosList({ gastos, rate }: GastosListProps) {
   const sorted = [...gastos].sort(
     (a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
   );
+  const visibleGastos =
+    groupFilter === "all"
+      ? sorted
+      : sorted.filter((g) => (memberMap[g.id] ?? []).includes(groupFilter));
 
   return (
     <div className="space-y-4">
@@ -73,6 +84,23 @@ export function GastosList({ gastos, rate }: GastosListProps) {
         </Dialog>
       </div>
 
+      {groups.length > 0 && gastos.length > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Grupo:</span>
+          <Select value={groupFilter} onValueChange={(v) => setGroupFilter(v ?? "all")}>
+            <SelectTrigger className="h-8 w-52 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {groups.map((g) => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {gastos.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
           <p className="text-sm text-muted-foreground">No hay gastos anuales cargados</p>
@@ -85,6 +113,7 @@ export function GastosList({ gastos, rate }: GastosListProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
+              <TableHead>Grupos</TableHead>
               <TableHead>Vencimiento</TableHead>
               <TableHead className="text-center">Moneda</TableHead>
               <TableHead className="text-right">Monto</TableHead>
@@ -92,7 +121,7 @@ export function GastosList({ gastos, rate }: GastosListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((gasto) => {
+            {visibleGastos.map((gasto) => {
               const isUSD = gasto.currency === "USD";
               return (
                 <TableRow key={gasto.id}>
@@ -110,6 +139,14 @@ export function GastosList({ gastos, rate }: GastosListProps) {
                         <p className="text-xs text-muted-foreground">{gasto.notes}</p>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <GroupTags
+                      entityType="annual_expense"
+                      entityId={gasto.id}
+                      groups={groups}
+                      memberIds={memberMap[gasto.id] ?? []}
+                    />
                   </TableCell>
                   <TableCell className="text-sm">{formatDate(gasto.due_date)}</TableCell>
                   <TableCell className="text-center">

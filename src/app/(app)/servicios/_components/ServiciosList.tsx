@@ -18,9 +18,13 @@ import { ExchangeRateBar } from "@/components/shared/ExchangeRateBar";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { GroupTags, type GroupOption } from "@/components/shared/GroupTags";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -29,6 +33,8 @@ interface ServiciosListProps {
   services: Tables<"services">[];
   records: Tables<"service_monthly_records">[];
   exchangeRates: Tables<"exchange_rates">[];
+  groups: GroupOption[];
+  memberMap: Record<string, string[]>;
 }
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -82,10 +88,11 @@ function toARS(amount: number, currency: string, rate: number | null): number {
   return amount;
 }
 
-export function ServiciosList({ services, records, exchangeRates }: ServiciosListProps) {
+export function ServiciosList({ services, records, exchangeRates, groups, memberMap }: ServiciosListProps) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [groupFilter, setGroupFilter] = useState<string>("all");
   const [openCreate, setOpenCreate] = useState(false);
   const [editingService, setEditingService] = useState<Tables<"services"> | null>(null);
   const [editingRecord, setEditingRecord] = useState<Tables<"services"> | null>(null);
@@ -159,6 +166,11 @@ export function ServiciosList({ services, records, exchangeRates }: ServiciosLis
     const rec = getRecord(records, s.id, year, month);
     return rec?.is_paid ?? false;
   }).length;
+
+  const visibleServices =
+    groupFilter === "all"
+      ? services
+      : services.filter((s) => (memberMap[s.id] ?? []).includes(groupFilter));
 
   return (
     <div className="space-y-4">
@@ -247,6 +259,23 @@ export function ServiciosList({ services, records, exchangeRates }: ServiciosLis
         </div>
       )}
 
+      {groups.length > 0 && services.length > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Grupo:</span>
+          <Select value={groupFilter} onValueChange={(v) => setGroupFilter(v ?? "all")}>
+            <SelectTrigger className="h-8 w-52 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {groups.map((g) => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {services.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
           <p className="text-sm text-muted-foreground">No hay servicios cargados</p>
@@ -258,6 +287,7 @@ export function ServiciosList({ services, records, exchangeRates }: ServiciosLis
             <TableRow>
               <TableHead className="w-4" />
               <TableHead>Nombre</TableHead>
+              <TableHead>Grupos</TableHead>
               <TableHead className="text-center">Moneda</TableHead>
               <TableHead className="text-right">Monto mes</TableHead>
               <TableHead className="text-center">Débito</TableHead>
@@ -267,7 +297,7 @@ export function ServiciosList({ services, records, exchangeRates }: ServiciosLis
             </TableRow>
           </TableHeader>
           <TableBody>
-            {services.map((service) => {
+            {visibleServices.map((service) => {
               const record = getRecord(records, service.id, year, month);
               const effectiveActive = getEffectiveActive(service, records, year, month);
               const effectiveAmount = getEffectiveAmount(service, record);
@@ -301,6 +331,15 @@ export function ServiciosList({ services, records, exchangeRates }: ServiciosLis
                     {(record?.notes ?? service.notes) && (
                       <p className="text-xs text-muted-foreground">{record?.notes ?? service.notes}</p>
                     )}
+                  </TableCell>
+
+                  <TableCell>
+                    <GroupTags
+                      entityType="service"
+                      entityId={service.id}
+                      groups={groups}
+                      memberIds={memberMap[service.id] ?? []}
+                    />
                   </TableCell>
 
                   <TableCell className="text-center">

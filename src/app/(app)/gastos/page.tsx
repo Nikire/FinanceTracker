@@ -8,10 +8,15 @@ export default async function GastosPage() {
   const supabase = await createClient();
 
   const now = new Date();
-  const [{ data: gastos }, { data: rates }] = await Promise.all([
+  const [{ data: gastos }, { data: rates }, { data: groups }, { data: groupItems }] = await Promise.all([
     supabase.from("annual_expenses").select("*").order("due_date"),
     supabase.from("exchange_rates").select("usd_to_ars, kind, year, month"),
+    supabase.from("groups").select("id, name, color").order("name"),
+    supabase.from("group_items").select("group_id, entity_id").eq("entity_type", "annual_expense"),
   ]);
+
+  const memberMap: Record<string, string[]> = {};
+  for (const it of groupItems ?? []) (memberMap[it.entity_id] ??= []).push(it.group_id);
 
   // Cotización 'service' del mes actual para unificar montos en USD a ARS.
   const rate = rateFor(rates ?? [], "service", now.getFullYear(), now.getMonth() + 1);
@@ -24,7 +29,7 @@ export default async function GastosPage() {
           Gastos con fecha específica en el calendario
         </p>
       </div>
-      <GastosList gastos={gastos ?? []} rate={rate} />
+      <GastosList gastos={gastos ?? []} rate={rate} groups={groups ?? []} memberMap={memberMap} />
     </div>
   );
 }
