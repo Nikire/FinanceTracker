@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -29,9 +30,10 @@ export function GastoForm({ gasto, onSuccess }: GastoFormProps) {
           amount: gasto.amount,
           currency: gasto.currency,
           due_date: gasto.due_date,
+          recurring: gasto.recurring,
           notes: gasto.notes ?? "",
         }
-      : { name: "", amount: 0, currency: "ARS", due_date: "", notes: "" },
+      : { name: "", amount: 0, currency: "ARS", due_date: "", recurring: false, notes: "" },
   });
 
   async function onSubmit(values: AnnualExpenseFormValues) {
@@ -119,6 +121,24 @@ export function GastoForm({ gasto, onSuccess }: GastoFormProps) {
                 <Input type="date" {...field} />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="recurring"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <FormLabel className="cursor-pointer">Se repite cada año</FormLabel>
+                <p className="text-xs text-muted-foreground">
+                  Al vencer, se genera automáticamente la entrada del año siguiente
+                </p>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
             </FormItem>
           )}
         />

@@ -233,6 +233,7 @@ const handler = createMcpHandler(
         amount: z.number().positive(),
         currency: currency.optional().describe("Moneda del gasto. Default ARS."),
         due_date: z.string().describe("Fecha de vencimiento YYYY-MM-DD."),
+        recurring: z.boolean().optional().describe("Si se repite cada año (genera la entrada del año siguiente al vencer). Default false."),
         notes: z.string().optional(),
       },
       (a) => ops.createAnnualExpense(ctx, a as Parameters<typeof ops.createAnnualExpense>[1])
@@ -247,6 +248,7 @@ const handler = createMcpHandler(
         amount: z.number().positive().optional(),
         currency: currency.optional(),
         due_date: z.string().optional().describe("YYYY-MM-DD."),
+        recurring: z.boolean().optional().describe("Si se repite cada año."),
         notes: z.string().optional(),
       },
       (a) => ops.updateAnnualExpense(ctx, a as Parameters<typeof ops.updateAnnualExpense>[1])
