@@ -10,9 +10,13 @@ import { IngresoForm } from "./IngresoForm";
 import { ExchangeRateBar } from "@/components/shared/ExchangeRateBar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { GroupTags, type GroupOption } from "@/components/shared/GroupTags";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -20,6 +24,8 @@ import {
 interface IngresosListProps {
   ingresos: Tables<"income">[];
   exchangeRates: Tables<"exchange_rates">[];
+  groups: GroupOption[];
+  memberMap: Record<string, string[]>;
 }
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -36,10 +42,11 @@ const FREQUENCY_VARIANTS: Record<string, "default" | "secondary" | "outline"> = 
   fixed: "outline",
 };
 
-export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
+export function IngresosList({ ingresos, exchangeRates, groups, memberMap }: IngresosListProps) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [groupFilter, setGroupFilter] = useState<string>("all");
   const [openCreate, setOpenCreate] = useState(false);
   const [editingIngreso, setEditingIngreso] = useState<Tables<"income"> | null>(null);
 
@@ -83,6 +90,11 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
 
   // ¿Hay ingresos en USD que no podemos convertir por falta de cotización?
   const usdSinCotizar = !rate && monthIngresos.some((i) => i.currency === "USD");
+
+  const visibleIngresos =
+    groupFilter === "all"
+      ? monthIngresos
+      : monthIngresos.filter((i) => (memberMap[i.id] ?? []).includes(groupFilter));
 
   return (
     <div className="space-y-4">
@@ -143,6 +155,23 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
         </div>
       </div>
 
+      {groups.length > 0 && monthIngresos.length > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Grupo:</span>
+          <Select value={groupFilter} onValueChange={(v) => setGroupFilter(v ?? "all")}>
+            <SelectTrigger className="h-8 w-52 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {groups.map((g) => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {monthIngresos.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
           <p className="text-sm text-muted-foreground">
@@ -158,6 +187,7 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
             <TableRow>
               <TableHead className="w-2 p-0" />
               <TableHead>Descripción</TableHead>
+              <TableHead>Grupos</TableHead>
               <TableHead className="text-center">Frecuencia</TableHead>
               <TableHead className="text-center">Moneda</TableHead>
               <TableHead className="text-right">Monto</TableHead>
@@ -165,7 +195,7 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {monthIngresos.map((ingreso) => {
+            {visibleIngresos.map((ingreso) => {
               const currency = (ingreso.currency ?? "ARS") as "ARS" | "USD";
               return (
                 <TableRow key={ingreso.id}>
@@ -182,6 +212,14 @@ export function IngresosList({ ingresos, exchangeRates }: IngresosListProps) {
                         <p className="text-xs text-muted-foreground">{ingreso.notes}</p>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <GroupTags
+                      entityType="income"
+                      entityId={ingreso.id}
+                      groups={groups}
+                      memberIds={memberMap[ingreso.id] ?? []}
+                    />
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant={FREQUENCY_VARIANTS[ingreso.frequency] ?? "outline"}>
