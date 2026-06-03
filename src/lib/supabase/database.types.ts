@@ -147,6 +147,68 @@ export type Database = {
         }
         Relationships: []
       }
+      groups: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      group_items: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["group_entity"]
+          group_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["group_entity"]
+          group_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["group_entity"]
+          group_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       income: {
         Row: {
           amount: number
@@ -307,6 +369,7 @@ export type Database = {
       attachment_entity: "service" | "annual_expense" | "income"
       currency_type: "ARS" | "USD"
       exchange_rate_kind: "service" | "income"
+      group_entity: "service" | "annual_expense" | "income"
       income_frequency: "monthly" | "annual" | "fixed"
       service_recurrence: "monthly" | "one_time"
     }
@@ -442,6 +505,7 @@ export const Constants = {
       attachment_entity: ["service", "annual_expense", "income"],
       currency_type: ["ARS", "USD"],
       exchange_rate_kind: ["service", "income"],
+      group_entity: ["service", "annual_expense", "income"],
       income_frequency: ["monthly", "annual", "fixed"],
       service_recurrence: ["monthly", "one_time"],
     },

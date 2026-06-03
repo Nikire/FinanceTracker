@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import * as ops from "@/lib/finance/operations";
 import * as files from "@/lib/finance/attachments";
+import * as groups from "@/lib/finance/groups";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -338,6 +339,68 @@ const handler = createMcpHandler(
       "Elimina un adjunto (del Storage y de la base). Acción irreversible.",
       { id: z.string().describe("id del adjunto.") },
       (a) => files.deleteAttachment(ctx, a as { id: string })
+    );
+
+    // ── Grupos / carpetas (cross-tipo, muchos-a-muchos) ───────────────────────────
+    const entityType = z
+      .enum(["service", "annual_expense", "income"])
+      .describe("Tipo de ítem: service (servicio), annual_expense (gasto anual) o income (ingreso).");
+
+    tool(
+      "create_group",
+      "Crea un grupo/carpeta para agrupar servicios, gastos anuales e ingresos (cross-tipo). color opcional (hex).",
+      {
+        name: z.string().describe("Nombre del grupo, ej 'Borderless ATS', 'Personal'."),
+        color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional().describe("Color hex, ej #3b82f6."),
+      },
+      (a) => groups.createGroup(ctx, a as Parameters<typeof groups.createGroup>[1])
+    );
+
+    tool(
+      "list_groups",
+      "Lista los grupos con sus miembros (servicios, gastos anuales e ingresos que contiene cada uno).",
+      {},
+      () => groups.listGroups(ctx)
+    );
+
+    tool(
+      "update_group",
+      "Modifica un grupo (nombre y/o color), por nombre o id.",
+      {
+        group: z.string().describe("Nombre o id del grupo."),
+        name: z.string().optional(),
+        color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+      },
+      (a) => groups.updateGroup(ctx, a as Parameters<typeof groups.updateGroup>[1])
+    );
+
+    tool(
+      "delete_group",
+      "Elimina un grupo (los ítems no se borran, solo se quita la agrupación). Por nombre o id.",
+      { group: z.string().describe("Nombre o id del grupo.") },
+      (a) => groups.deleteGroup(ctx, a as { group: string })
+    );
+
+    tool(
+      "add_to_group",
+      "Agrega un ítem (servicio/gasto anual/ingreso) a un grupo. Un ítem puede estar en varios grupos.",
+      {
+        group: z.string().describe("Nombre o id del grupo."),
+        entity_type: entityType,
+        entity: z.string().describe("Nombre o id del ítem a agregar."),
+      },
+      (a) => groups.addToGroup(ctx, a as Parameters<typeof groups.addToGroup>[1])
+    );
+
+    tool(
+      "remove_from_group",
+      "Quita un ítem de un grupo (no lo elimina, solo lo desvincula del grupo).",
+      {
+        group: z.string().describe("Nombre o id del grupo."),
+        entity_type: entityType,
+        entity: z.string().describe("Nombre o id del ítem a quitar."),
+      },
+      (a) => groups.removeFromGroup(ctx, a as Parameters<typeof groups.removeFromGroup>[1])
     );
 
     // ── Prompt reutilizable: procesar invoice ─────────────────────────────────────
