@@ -98,7 +98,14 @@ export function GastosList({ gastos, rate }: GastosListProps) {
                 <TableRow key={gasto.id}>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{gasto.name}</p>
+                      <p className="flex items-center gap-1.5 font-medium">
+                        {gasto.name}
+                        {gasto.recurring && (
+                          <span title="Se repite cada año" className="text-xs text-muted-foreground">
+                            ↻ anual
+                          </span>
+                        )}
+                      </p>
                       {gasto.notes && (
                         <p className="text-xs text-muted-foreground">{gasto.notes}</p>
                       )}

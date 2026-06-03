@@ -7,6 +7,7 @@ export const annualExpenseSchema = z.object({
     .positive("El monto debe ser mayor a 0"),
   currency: z.enum(["ARS", "USD"]).default("ARS"),
   due_date: z.string().min(1, "La fecha es requerida"),
+  recurring: z.boolean().default(false),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 

@@ -627,13 +627,21 @@ export async function listAnnualExpenses(
 
 export async function createAnnualExpense(
   ctx: Ctx,
-  args: { name: string; amount: number; due_date: string; currency?: "ARS" | "USD"; notes?: string }
+  args: {
+    name: string;
+    amount: number;
+    due_date: string;
+    currency?: "ARS" | "USD";
+    recurring?: boolean;
+    notes?: string;
+  }
 ): Promise<OpResult> {
   const parsed = annualExpenseSchema.safeParse({
     name: args.name,
     amount: args.amount,
     currency: args.currency ?? "ARS",
     due_date: args.due_date,
+    recurring: args.recurring ?? false,
     notes: args.notes ?? "",
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -655,6 +663,7 @@ export async function updateAnnualExpense(
     amount?: number;
     currency?: "ARS" | "USD";
     due_date?: string;
+    recurring?: boolean;
     notes?: string;
   }
 ): Promise<OpResult> {
@@ -667,6 +676,7 @@ export async function updateAnnualExpense(
     amount: args.amount ?? cur.amount,
     currency: args.currency ?? cur.currency,
     due_date: args.due_date ?? cur.due_date,
+    recurring: args.recurring ?? cur.recurring,
     notes: args.notes ?? cur.notes ?? "",
   };
   const parsed = annualExpenseSchema.safeParse(merged);

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/roll-annual-expenses",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}
