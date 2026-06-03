@@ -2,6 +2,7 @@ import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import * as ops from "@/lib/finance/operations";
+import * as files from "@/lib/finance/attachments";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -295,6 +296,73 @@ const handler = createMcpHandler(
       "Panorama general: cantidades totales, resumen del mes actual y gastos anuales de los próximos 60 días.",
       {},
       () => ops.getFinancialOverview(ctx)
+    );
+
+    // ── Adjuntos / invoices ───────────────────────────────────────────────────────
+    tool(
+      "check_invoice",
+      "DEDUP: dado el SHA-256 (hex) del archivo, indica si ese invoice ya fue subido y a qué entidades. Llamar SIEMPRE antes de procesar/subir, para evitar duplicados en cargas masivas.",
+      { content_hash: z.string().describe("SHA-256 del archivo en hex minúscula (64 chars).") },
+      (a) => files.checkInvoice(ctx, a as { content_hash: string })
+    );
+
+    tool(
+      "upload_invoice",
+      "Sube un invoice (base64) al Storage y lo vincula a un servicio/gasto/ingreso. Idempotente: si ese archivo ya está vinculado a esa entidad, no duplica.",
+      {
+        entity_type: z.enum(["service", "annual_expense", "income"]).describe("Tipo de entidad a la que pertenece el invoice."),
+        entity_id: z.string().describe("id de la entidad (ej id del servicio)."),
+        file_name: z.string().describe("Nombre original del archivo, ej 'google-2026-05.pdf'."),
+        content_base64: z.string().describe("Contenido del archivo codificado en base64."),
+        mime_type: z.string().optional().describe("Ej application/pdf, image/png."),
+      },
+      (a) => files.uploadInvoice(ctx, a as Parameters<typeof files.uploadInvoice>[1])
+    );
+
+    tool(
+      "list_attachments",
+      "Lista los adjuntos, opcionalmente filtrando por entidad. Incluye URLs firmadas temporales para verlos.",
+      {
+        entity_type: z.enum(["service", "annual_expense", "income"]).optional(),
+        entity_id: z.string().optional(),
+      },
+      (a) => files.listAttachments(ctx, a as Parameters<typeof files.listAttachments>[1])
+    );
+
+    tool(
+      "delete_attachment",
+      "Elimina un adjunto (del Storage y de la base). Acción irreversible.",
+      { id: z.string().describe("id del adjunto.") },
+      (a) => files.deleteAttachment(ctx, a as { id: string })
+    );
+
+    // ── Prompt reutilizable: procesar invoice ─────────────────────────────────────
+    server.prompt(
+      "process_invoice",
+      "Workflow para procesar un invoice/factura: deduplicar, identificar el servicio, crear/editar con color de marca y aplicar el precio del mes.",
+      () => ({
+        messages: [
+          {
+            role: "user" as const,
+            content: {
+              type: "text" as const,
+              text: [
+                "Vas a procesar uno o más invoices/facturas para FinanceTracker. Seguí SIEMPRE este flujo:",
+                "",
+                "1. LEER: extraé del invoice → comercio/servicio, monto, moneda (ARS/USD), período (mes/año), fecha de vencimiento y si figura pago.",
+                "2. DEDUP (obligatorio, antes de todo): calculá el SHA-256 del archivo y llamá check_invoice. Si exists=true, NO lo vuelvas a subir ni a aplicar; marcalo como 'salteado (ya cargado)'. Esto es clave en cargas masivas con repetidos.",
+                "3. IDENTIFICAR SERVICIO: llamá list_services y matcheá por nombre del comercio. SIEMPRE primero verificá si ya existe.",
+                "   - Si EXISTE: decidí si es cambio de precio permanente (update_service) o solo el monto de ese mes (set_service_month_amount).",
+                "   - Si NO EXISTE: crealo con create_service. Buscá el color hex oficial de la marca (tu conocimiento o búsqueda web) y guardalo en 'color' — es importante como identidad visual.",
+                "4. APLICAR: aplicá el precio/período correspondiente y, si el invoice está pago, mark_service_paid en ese mes.",
+                "5. ADJUNTAR: subí el archivo con upload_invoice vinculándolo al servicio (entity_type='service', entity_id=<id>).",
+                "",
+                "ANTES de ejecutar cambios, mostrá un PREVIEW de qué vas a hacer con cada archivo (crear/editar/override, color, subir o saltear) y esperá confirmación del usuario. Recién con el OK, ejecutá.",
+              ].join("\n"),
+            },
+          },
+        ],
+      })
     );
   },
   {
