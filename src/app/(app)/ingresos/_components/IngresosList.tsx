@@ -158,7 +158,11 @@ export function IngresosList({ ingresos, exchangeRates, groups, memberMap }: Ing
       {groups.length > 0 && monthIngresos.length > 0 && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Grupo:</span>
-          <Select value={groupFilter} onValueChange={(v) => setGroupFilter(v ?? "all")}>
+          <Select
+            items={{ all: "Todos", ...Object.fromEntries(groups.map((g) => [g.id, g.name])) }}
+            value={groupFilter}
+            onValueChange={(v) => setGroupFilter(v ?? "all")}
+          >
             <SelectTrigger className="h-8 w-52 text-xs">
               <SelectValue />
             </SelectTrigger>

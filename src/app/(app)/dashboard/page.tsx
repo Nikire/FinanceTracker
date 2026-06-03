@@ -2,7 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Tables } from "@/lib/supabase/database.types";
 import { ResumenCards } from "./_components/ResumenCards";
 import { GraficoBarras } from "./_components/GraficoBarras";
+import { GastosPorServicio } from "./_components/GastosPorServicio";
+import { ComposicionGastos } from "./_components/ComposicionGastos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils/format";
 
 // Datos por usuario que cambian seguido: siempre renderizar con la DB actual
 export const dynamic = "force-dynamic";
@@ -28,7 +31,7 @@ function toARS(amount: number, currency: string | null, rate: number | null): nu
   return amount;
 }
 
-type ServiceRow = { id: string; amount: number; active: boolean; currency: string | null };
+type ServiceRow = { id: string; name: string; amount: number; active: boolean; currency: string | null; color: string | null };
 type RecordRow = Tables<"service_monthly_records">;
 type IngresoRow = { amount: number; currency: string | null; year: number; month: number };
 type RateRow = { usd_to_ars: number; kind: string; year: number; month: number };
@@ -119,7 +122,7 @@ export default async function DashboardPage() {
     { data: ingresos },
     { data: rates },
   ] = await Promise.all([
-    supabase.from("services").select("id, amount, active, currency"),
+    supabase.from("services").select("id, name, amount, active, currency, color"),
     supabase.from("service_monthly_records").select("*"),
     supabase.from("annual_expenses").select("due_date, amount, currency"),
     supabase.from("income").select("amount, currency, year, month"),
@@ -141,6 +144,23 @@ export default async function DashboardPage() {
   );
   const chartData = buildChartData(serviceList, recordList, ingresoList, rateList);
 
+  // Gastos del mes por servicio (en ARS), con el color de cada servicio
+  const rateServ = rateFor(rateList, "service", year, month);
+  const gastosPorServicio = serviceList
+    .filter((s) => effectiveActive(s, recordList, year, month))
+    .map((s) => {
+      const rec = recordList.find((r) => r.service_id === s.id && r.year === year && r.month === month);
+      const amount = rec?.amount ?? s.amount;
+      const currency = rec?.currency ?? s.currency;
+      return { name: s.name, ars: toARS(amount, currency, rateServ), color: s.color ?? "#6366f1" };
+    })
+    .filter((d) => d.ars > 0)
+    .sort((a, b) => b.ars - a.ars)
+    .slice(0, 10);
+
+  // Mes con mayor gasto en los últimos 6
+  const mesMayorGasto = chartData.reduce((max, d) => (d.gastos > max.gastos ? d : max), chartData[0]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -157,12 +177,39 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Últimos 6 meses</CardTitle>
+          <CardTitle className="text-base">Ingresos vs Gastos (últimos 6 meses)</CardTitle>
         </CardHeader>
         <CardContent>
           <GraficoBarras data={chartData} />
+          {mesMayorGasto && mesMayorGasto.gastos > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Mes de mayor gasto:{" "}
+              <span className="font-medium text-foreground">{mesMayorGasto.mes}</span> (
+              {formatCurrency(mesMayorGasto.gastos)})
+            </p>
+          )}
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Gastos del mes por servicio</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <GastosPorServicio data={gastosPorServicio} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Composición de gastos del mes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ComposicionGastos mensual={gastosMensuales} anual={gastosAnualesProximos} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

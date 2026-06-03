@@ -120,7 +120,7 @@ export function IngresoForm({ ingreso, year, month, onSuccess }: IngresoFormProp
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Frecuencia</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select items={FREQUENCY_LABELS} onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccioná..." />
@@ -146,7 +146,7 @@ export function IngresoForm({ ingreso, year, month, onSuccess }: IngresoFormProp
           render={({ field }) => (
             <FormItem>
               <FormLabel>Moneda</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select items={{ ARS: "ARS — Peso argentino", USD: "USD — Dólar" }} onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue />
