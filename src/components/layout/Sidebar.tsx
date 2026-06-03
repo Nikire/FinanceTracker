@@ -7,6 +7,7 @@ import {
   Repeat2,
   CalendarDays,
   TrendingUp,
+  FolderTree,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/servicios", label: "Servicios", icon: Repeat2 },
   { href: "/gastos", label: "Gastos anuales", icon: CalendarDays },
   { href: "/ingresos", label: "Ingresos", icon: TrendingUp },
+  { href: "/grupos", label: "Grupos", icon: FolderTree },
 ];
 
 export function Sidebar() {
