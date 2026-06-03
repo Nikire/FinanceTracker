@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 interface GastoFormProps {
   gasto?: Tables<"annual_expenses">;
@@ -24,10 +27,11 @@ export function GastoForm({ gasto, onSuccess }: GastoFormProps) {
       ? {
           name: gasto.name,
           amount: gasto.amount,
+          currency: gasto.currency,
           due_date: gasto.due_date,
           notes: gasto.notes ?? "",
         }
-      : { name: "", amount: 0, due_date: "", notes: "" },
+      : { name: "", amount: 0, currency: "ARS", due_date: "", notes: "" },
   });
 
   async function onSubmit(values: AnnualExpenseFormValues) {
@@ -66,7 +70,7 @@ export function GastoForm({ gasto, onSuccess }: GastoFormProps) {
             name="amount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Monto ($)</FormLabel>
+                <FormLabel>Monto</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -84,18 +88,40 @@ export function GastoForm({ gasto, onSuccess }: GastoFormProps) {
 
           <FormField
             control={form.control}
-            name="due_date"
+            name="currency"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Fecha de vencimiento</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
+                <FormLabel>Moneda</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="ARS">ARS — Peso argentino</SelectItem>
+                    <SelectItem value="USD">USD — Dólar</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="due_date"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Fecha de vencimiento</FormLabel>
+              <FormControl>
+                <Input type="date" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

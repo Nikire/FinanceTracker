@@ -612,17 +612,27 @@ export async function listAnnualExpenses(
     const limite = new Date(Date.now() + args.upcomingDays * 86400000).toISOString().slice(0, 10);
     list = list.filter((e) => e.due_date >= hoy && e.due_date <= limite);
   }
-  const total = list.reduce((sum, e) => sum + e.amount, 0);
-  return { count: list.length, total_amount: total, annual_expenses: list };
+
+  // Total unificado en ARS con la cotización 'service' del mes actual.
+  const cur = currentPeriod();
+  const rate = rateFor(await loadRates(ctx), "service", cur.year, cur.month);
+  const totalArs = list.reduce((sum, e) => sum + toARS(e.amount, e.currency, rate), 0);
+  return {
+    count: list.length,
+    total_ars: Math.round(totalArs * 100) / 100,
+    service_usd_to_ars: rate,
+    annual_expenses: list,
+  };
 }
 
 export async function createAnnualExpense(
   ctx: Ctx,
-  args: { name: string; amount: number; due_date: string; notes?: string }
+  args: { name: string; amount: number; due_date: string; currency?: "ARS" | "USD"; notes?: string }
 ): Promise<OpResult> {
   const parsed = annualExpenseSchema.safeParse({
     name: args.name,
     amount: args.amount,
+    currency: args.currency ?? "ARS",
     due_date: args.due_date,
     notes: args.notes ?? "",
   });
@@ -639,7 +649,14 @@ export async function createAnnualExpense(
 
 export async function updateAnnualExpense(
   ctx: Ctx,
-  args: { expense: string; name?: string; amount?: number; due_date?: string; notes?: string }
+  args: {
+    expense: string;
+    name?: string;
+    amount?: number;
+    currency?: "ARS" | "USD";
+    due_date?: string;
+    notes?: string;
+  }
 ): Promise<OpResult> {
   const r = await resolveAnnualExpense(ctx, args.expense);
   if ("error" in r) return r;
@@ -648,6 +665,7 @@ export async function updateAnnualExpense(
   const merged = {
     name: args.name ?? cur.name,
     amount: args.amount ?? cur.amount,
+    currency: args.currency ?? cur.currency,
     due_date: args.due_date ?? cur.due_date,
     notes: args.notes ?? cur.notes ?? "",
   };
@@ -772,7 +790,7 @@ export async function getMonthlySummary(
   const [{ data: services }, { data: income }, { data: annual }] = await Promise.all([
     ctx.sb.from("services").select("*").eq("user_id", ctx.userId),
     ctx.sb.from("income").select("*").eq("user_id", ctx.userId),
-    ctx.sb.from("annual_expenses").select("due_date, amount").eq("user_id", ctx.userId),
+    ctx.sb.from("annual_expenses").select("due_date, amount, currency").eq("user_id", ctx.userId),
   ]);
   const records = await loadRecords(ctx);
   const rates = await loadRates(ctx);
@@ -798,7 +816,7 @@ export async function getMonthlySummary(
   const limite = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
   const proximosAnuales = (annual ?? [])
     .filter((e) => e.due_date >= hoy && e.due_date <= limite)
-    .reduce((sum, e) => sum + e.amount, 0);
+    .reduce((sum, e) => sum + toARS(e.amount, e.currency, rate), 0);
 
   const round = (n: number) => Math.round(n * 100) / 100;
   return {
