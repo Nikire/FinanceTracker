@@ -43,6 +43,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          currency: Database["public"]["Enums"]["currency_type"]
           due_date: string
           id: string
           name: string
@@ -53,6 +54,7 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
           due_date: string
           id?: string
           name: string
@@ -63,6 +65,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
           due_date?: string
           id?: string
           name?: string

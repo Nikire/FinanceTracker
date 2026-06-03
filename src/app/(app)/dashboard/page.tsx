@@ -7,7 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // Datos por usuario que cambian seguido: siempre renderizar con la DB actual
 export const dynamic = "force-dynamic";
 
-function getProximos30Dias(gastos: { due_date: string; amount: number }[]) {
+function getProximos30Dias(
+  gastos: { due_date: string; amount: number; currency: string | null }[],
+  rate: number | null
+) {
   const hoy = new Date();
   const limite = new Date();
   limite.setDate(limite.getDate() + 30);
@@ -16,7 +19,7 @@ function getProximos30Dias(gastos: { due_date: string; amount: number }[]) {
       const fecha = new Date(g.due_date + "T12:00:00");
       return fecha >= hoy && fecha <= limite;
     })
-    .reduce((sum, g) => sum + g.amount, 0);
+    .reduce((sum, g) => sum + toARS(g.amount, g.currency, rate), 0);
 }
 
 // Convierte un monto a ARS unificado usando la cotización del tipo correspondiente
@@ -118,7 +121,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from("services").select("id, amount, active, currency"),
     supabase.from("service_monthly_records").select("*"),
-    supabase.from("annual_expenses").select("due_date, amount"),
+    supabase.from("annual_expenses").select("due_date, amount, currency"),
     supabase.from("income").select("amount, currency, year, month"),
     supabase.from("exchange_rates").select("usd_to_ars, kind, year, month"),
   ]);
@@ -132,7 +135,10 @@ export default async function DashboardPage() {
   const ingresosMensuales = ingresosDelMes(ingresoList, rateList, year, month);
 
   const balance = ingresosMensuales - gastosMensuales;
-  const gastosAnualesProximos = getProximos30Dias(gastos ?? []);
+  const gastosAnualesProximos = getProximos30Dias(
+    gastos ?? [],
+    rateFor(rateList, "service", year, month)
+  );
   const chartData = buildChartData(serviceList, recordList, ingresoList, rateList);
 
   return (

@@ -227,10 +227,11 @@ const handler = createMcpHandler(
 
     tool(
       "create_annual_expense",
-      "Crea un gasto anual con fecha de vencimiento (due_date en formato YYYY-MM-DD).",
+      "Crea un gasto anual con fecha de vencimiento (due_date en formato YYYY-MM-DD). currency default ARS.",
       {
         name: z.string(),
         amount: z.number().positive(),
+        currency: currency.optional().describe("Moneda del gasto. Default ARS."),
         due_date: z.string().describe("Fecha de vencimiento YYYY-MM-DD."),
         notes: z.string().optional(),
       },
@@ -244,6 +245,7 @@ const handler = createMcpHandler(
         expense: z.string().describe("Nombre o id del gasto anual."),
         name: z.string().optional(),
         amount: z.number().positive().optional(),
+        currency: currency.optional(),
         due_date: z.string().optional().describe("YYYY-MM-DD."),
         notes: z.string().optional(),
       },
