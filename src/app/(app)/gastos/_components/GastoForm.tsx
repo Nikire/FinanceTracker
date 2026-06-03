@@ -94,7 +94,7 @@ export function GastoForm({ gasto, onSuccess }: GastoFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Moneda</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select items={{ ARS: "ARS — Peso argentino", USD: "USD — Dólar" }} onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue />

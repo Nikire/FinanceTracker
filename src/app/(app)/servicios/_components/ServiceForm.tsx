@@ -116,7 +116,7 @@ export function ServiceForm({ service, onSuccess }: ServiceFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Moneda</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select items={{ ARS: "ARS — Peso argentino", USD: "USD — Dólar" }} onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue />
@@ -174,7 +174,7 @@ export function ServiceForm({ service, onSuccess }: ServiceFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Recurrencia</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select items={{ monthly: "Mensual — se copia al mes siguiente", one_time: "Único — no se copia" }} onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue />

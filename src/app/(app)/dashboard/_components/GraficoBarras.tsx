@@ -60,8 +60,8 @@ export function GraficoBarras({ data }: GraficoBarrasProps) {
         <Legend
           formatter={(value) => (value === "ingresos" ? "Ingresos" : "Gastos")}
         />
-        <Bar dataKey="ingresos" fill="var(--color-chart-2)" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="gastos" fill="var(--color-chart-5)" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="ingresos" fill="#10b981" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="gastos" fill="#f43f5e" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

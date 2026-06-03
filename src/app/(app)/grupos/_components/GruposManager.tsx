@@ -175,7 +175,7 @@ function AddMemberRow({ group, catalogs }: { group: GroupView; catalogs: Catalog
 
   return (
     <div className="mt-3 flex items-center gap-2 border-t pt-3">
-      <Select value={type} onValueChange={(v) => { setType(v as EntityType); setEntityId(""); }}>
+      <Select items={TYPE_LABEL} value={type} onValueChange={(v) => { setType(v as EntityType); setEntityId(""); }}>
         <SelectTrigger className="h-8 w-32 text-xs">
           <SelectValue />
         </SelectTrigger>
@@ -185,7 +185,7 @@ function AddMemberRow({ group, catalogs }: { group: GroupView; catalogs: Catalog
           ))}
         </SelectContent>
       </Select>
-      <Select value={entityId} onValueChange={(v) => setEntityId(v ?? "")}>
+      <Select items={Object.fromEntries(catalogs[type].map((o) => [o.id, o.label]))} value={entityId} onValueChange={(v) => setEntityId(v ?? "")}>
         <SelectTrigger className="h-8 flex-1 text-xs">
           <SelectValue placeholder={options.length ? "Elegí un ítem..." : "Nada para agregar"} />
         </SelectTrigger>
