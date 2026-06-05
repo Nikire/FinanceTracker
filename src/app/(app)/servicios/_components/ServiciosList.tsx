@@ -53,13 +53,27 @@ function getRecord(
   return records.find((r) => r.service_id === serviceId && r.year === year && r.month === month) ?? null;
 }
 
-/** Calcula el estado activo efectivo buscando hacia atrás en los registros */
+const ymOf = (year: number, month: number) => year * 12 + month;
+
+/** Mes de inicio: registro más temprano, o mes de creación si no tiene registros */
+function getServiceStartYm(
+  service: Tables<"services">,
+  records: Tables<"service_monthly_records">[]
+): number {
+  const recs = records.filter((r) => r.service_id === service.id);
+  if (recs.length) return Math.min(...recs.map((r) => ymOf(r.year, r.month)));
+  const d = new Date(service.created_at);
+  return ymOf(d.getUTCFullYear(), d.getUTCMonth() + 1);
+}
+
+/** Calcula el estado activo efectivo (no cuenta antes de su mes de inicio) */
 function getEffectiveActive(
   service: Tables<"services">,
   records: Tables<"service_monthly_records">[],
   year: number,
   month: number
 ): boolean {
+  if (ymOf(year, month) < getServiceStartYm(service, records)) return false;
   const relevant = records
     .filter((r) => r.service_id === service.id && r.is_active !== null)
     .filter((r) => r.year < year || (r.year === year && r.month <= month))
