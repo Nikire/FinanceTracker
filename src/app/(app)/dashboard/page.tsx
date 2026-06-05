@@ -87,11 +87,27 @@ function ingresosDelMes(ingresos: IngresoRow[], rates: RateRow[], year: number, 
     .reduce((sum, i) => sum + toARS(i.amount, i.currency, rate), 0);
 }
 
+type CardInstRow = {
+  amount: number;
+  year: number;
+  month: number;
+  card_purchases: { description: string | null; currency: string | null } | null;
+};
+
+// Gastos de tarjeta del mes (cuotas que caen en ese mes), unificados a ARS
+function cardGastosDelMes(insts: CardInstRow[], rates: RateRow[], year: number, month: number): number {
+  const rate = rateFor(rates, "service", year, month);
+  return insts
+    .filter((i) => i.year === year && i.month === month)
+    .reduce((sum, i) => sum + toARS(i.amount, i.card_purchases?.currency ?? "ARS", rate), 0);
+}
+
 function buildChartData(
   services: ServiceRow[],
   records: RecordRow[],
   ingresos: IngresoRow[],
-  rates: RateRow[]
+  rates: RateRow[],
+  cardInsts: CardInstRow[]
 ) {
   const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
   const hoy = new Date();
@@ -103,7 +119,7 @@ function buildChartData(
     return {
       mes: MESES[fecha.getMonth()],
       ingresos: ingresosDelMes(ingresos, rates, y, m),
-      gastos: gastosDelMes(services, records, rates, y, m),
+      gastos: gastosDelMes(services, records, rates, y, m) + cardGastosDelMes(cardInsts, rates, y, m),
     };
   });
 }
@@ -121,39 +137,52 @@ export default async function DashboardPage() {
     { data: gastos },
     { data: ingresos },
     { data: rates },
+    { data: cardInsts },
   ] = await Promise.all([
     supabase.from("services").select("id, name, amount, active, currency, color"),
     supabase.from("service_monthly_records").select("*"),
     supabase.from("annual_expenses").select("due_date, amount, currency"),
     supabase.from("income").select("amount, currency, year, month"),
     supabase.from("exchange_rates").select("usd_to_ars, kind, year, month"),
+    supabase.from("card_installments").select("amount, year, month, card_purchases(description, currency)"),
   ]);
 
   const serviceList = (services ?? []) as ServiceRow[];
   const recordList = (records ?? []) as RecordRow[];
   const ingresoList = (ingresos ?? []) as IngresoRow[];
   const rateList = (rates ?? []) as RateRow[];
+  const cardInstList = (cardInsts ?? []) as unknown as CardInstRow[];
 
-  const gastosMensuales = gastosDelMes(serviceList, recordList, rateList, year, month);
+  const rateServ = rateFor(rateList, "service", year, month);
+  const gastosMensuales =
+    gastosDelMes(serviceList, recordList, rateList, year, month) +
+    cardGastosDelMes(cardInstList, rateList, year, month);
   const ingresosMensuales = ingresosDelMes(ingresoList, rateList, year, month);
 
   const balance = ingresosMensuales - gastosMensuales;
   const gastosAnualesProximos = getProximos30Dias(
     gastos ?? [],
-    rateFor(rateList, "service", year, month)
+    rateServ
   );
-  const chartData = buildChartData(serviceList, recordList, ingresoList, rateList);
+  const chartData = buildChartData(serviceList, recordList, ingresoList, rateList, cardInstList);
 
-  // Gastos del mes por servicio (en ARS), con el color de cada servicio
-  const rateServ = rateFor(rateList, "service", year, month);
-  const gastosPorServicio = serviceList
+  // Gastos del mes por servicio + cuotas de tarjeta del mes (en ARS)
+  const serviceItems = serviceList
     .filter((s) => effectiveActive(s, recordList, year, month))
     .map((s) => {
       const rec = recordList.find((r) => r.service_id === s.id && r.year === year && r.month === month);
       const amount = rec?.amount ?? s.amount;
       const currency = rec?.currency ?? s.currency;
       return { name: s.name, ars: toARS(amount, currency, rateServ), color: s.color ?? "#6366f1" };
-    })
+    });
+  const cardItems = cardInstList
+    .filter((i) => i.year === year && i.month === month)
+    .map((i) => ({
+      name: i.card_purchases?.description ?? "Tarjeta",
+      ars: toARS(i.amount, i.card_purchases?.currency ?? "ARS", rateServ),
+      color: "#64748b",
+    }));
+  const gastosPorServicio = [...serviceItems, ...cardItems]
     .filter((d) => d.ars > 0)
     .sort((a, b) => b.ars - a.ars)
     .slice(0, 10);

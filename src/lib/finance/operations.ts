@@ -797,15 +797,27 @@ export async function getMonthlySummary(
   args: { year?: number; month?: number; monthsAgo?: number }
 ): Promise<OpResult> {
   const p = resolvePeriod(args);
-  const [{ data: services }, { data: income }, { data: annual }] = await Promise.all([
+  const [{ data: services }, { data: income }, { data: annual }, { data: cardInsts }] = await Promise.all([
     ctx.sb.from("services").select("*").eq("user_id", ctx.userId),
     ctx.sb.from("income").select("*").eq("user_id", ctx.userId),
     ctx.sb.from("annual_expenses").select("due_date, amount, currency").eq("user_id", ctx.userId),
+    ctx.sb
+      .from("card_installments")
+      .select("amount, year, month, card_purchases(currency)")
+      .eq("user_id", ctx.userId)
+      .eq("year", p.year)
+      .eq("month", p.month),
   ]);
   const records = await loadRecords(ctx);
   const rates = await loadRates(ctx);
+  const rateServ = rateFor(rates, "service", p.year, p.month);
 
-  const gastos = gastosDelMes(services ?? [], records, rates, p.year, p.month);
+  const cardGastos = (cardInsts ?? []).reduce((sum, i) => {
+    const cur = (i.card_purchases as unknown as { currency: string | null } | null)?.currency ?? "ARS";
+    return sum + toARS(i.amount, cur, rateServ);
+  }, 0);
+
+  const gastos = gastosDelMes(services ?? [], records, rates, p.year, p.month) + cardGastos;
   const ingresos = ingresosDelMes(income ?? [], rates, p.year, p.month);
 
   // Pendientes del mes
@@ -833,6 +845,7 @@ export async function getMonthlySummary(
     period: periodLabel(p),
     ingresos_ars: round(ingresos),
     gastos_ars: round(gastos),
+    gastos_tarjeta_ars: round(cardGastos),
     balance_ars: round(ingresos - gastos),
     pendientes_count: pending.length,
     pendientes_ars: round(pendingArs),
