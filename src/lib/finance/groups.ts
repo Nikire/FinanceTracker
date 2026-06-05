@@ -8,7 +8,7 @@ import { groupSchema } from "@/lib/schemas/groups";
  */
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ENTITY_TYPES = ["service", "annual_expense", "income"] as const;
+const ENTITY_TYPES = ["service", "annual_expense", "income", "card_purchase"] as const;
 type EntityType = (typeof ENTITY_TYPES)[number];
 
 type Ctx = { sb: AdminClient; userId: string };
@@ -17,6 +17,7 @@ const ENTITY_LABEL: Record<EntityType, string> = {
   service: "servicio",
   annual_expense: "gasto anual",
   income: "ingreso",
+  card_purchase: "consumo de tarjeta",
 };
 
 // ── Resolución ────────────────────────────────────────────────────────────────
@@ -55,7 +56,11 @@ async function loadEntities(ctx: Ctx, type: EntityType): Promise<{ id: string; l
     const { data } = await ctx.sb.from("annual_expenses").select("id, name").eq("user_id", ctx.userId);
     return (data ?? []).map((r) => ({ id: r.id, label: r.name }));
   }
-  const { data } = await ctx.sb.from("income").select("id, description").eq("user_id", ctx.userId);
+  if (type === "income") {
+    const { data } = await ctx.sb.from("income").select("id, description").eq("user_id", ctx.userId);
+    return (data ?? []).map((r) => ({ id: r.id, label: r.description }));
+  }
+  const { data } = await ctx.sb.from("card_purchases").select("id, description").eq("user_id", ctx.userId);
   return (data ?? []).map((r) => ({ id: r.id, label: r.description }));
 }
 

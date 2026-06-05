@@ -26,13 +26,15 @@ const TYPE_LABEL: Record<EntityType, string> = {
   service: "Servicio",
   annual_expense: "Gasto anual",
   income: "Ingreso",
+  card_purchase: "Consumo tarjeta",
 };
 const TYPE_LABEL_PLURAL: Record<EntityType, string> = {
   service: "Servicios",
   annual_expense: "Gastos anuales",
   income: "Ingresos",
+  card_purchase: "Consumos de tarjeta",
 };
-const TYPES: EntityType[] = ["service", "annual_expense", "income"];
+const TYPES: EntityType[] = ["service", "annual_expense", "income", "card_purchase"];
 
 export function GruposManager({ groups, catalogs }: { groups: GroupView[]; catalogs: Catalogs }) {
   const [openCreate, setOpenCreate] = useState(false);

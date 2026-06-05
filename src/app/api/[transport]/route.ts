@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import * as ops from "@/lib/finance/operations";
 import * as files from "@/lib/finance/attachments";
 import * as groups from "@/lib/finance/groups";
+import * as cards from "@/lib/finance/cards";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -343,8 +344,8 @@ const handler = createMcpHandler(
 
     // ── Grupos / carpetas (cross-tipo, muchos-a-muchos) ───────────────────────────
     const entityType = z
-      .enum(["service", "annual_expense", "income"])
-      .describe("Tipo de ítem: service (servicio), annual_expense (gasto anual) o income (ingreso).");
+      .enum(["service", "annual_expense", "income", "card_purchase"])
+      .describe("Tipo de ítem: service (servicio), annual_expense (gasto anual), income (ingreso) o card_purchase (consumo de tarjeta).");
 
     tool(
       "create_group",
@@ -401,6 +402,69 @@ const handler = createMcpHandler(
         entity: z.string().describe("Nombre o id del ítem a quitar."),
       },
       (a) => groups.removeFromGroup(ctx, a as Parameters<typeof groups.removeFromGroup>[1])
+    );
+
+    // ── Uso de tarjeta (consumos puntuales y cuotas) ──────────────────────────────
+    tool(
+      "create_card_purchase",
+      "Registra un consumo de tarjeta. Si installments>1 genera las cuotas (una por mes consecutivo desde la fecha o desde first_year/first_month). paid_count marca cuántas cuotas ya están pagas.",
+      {
+        description: z.string().describe("Descripción del consumo, ej 'MercadoPago Salamara'."),
+        total_amount: z.number().positive().describe("Monto TOTAL de la compra (no el de la cuota)."),
+        purchase_date: z.string().describe("Fecha de la compra YYYY-MM-DD."),
+        currency: currency.optional().describe("Default ARS."),
+        installments: z.number().int().min(1).max(120).optional().describe("Cantidad de cuotas. Default 1 (pago único)."),
+        card: z.string().optional().describe("Tarjeta, ej 'Visa ICBC'."),
+        notes: z.string().optional(),
+        first_year: z.number().int().optional().describe("Año de la 1ª cuota (si difiere del mes de compra)."),
+        first_month: z.number().int().min(1).max(12).optional().describe("Mes de la 1ª cuota."),
+        paid_count: z.number().int().min(0).optional().describe("Cuántas cuotas ya están pagas (las primeras N). Default 0."),
+      },
+      (a) => cards.createCardPurchase(ctx, a as Parameters<typeof cards.createCardPurchase>[1])
+    );
+
+    tool(
+      "list_card_purchases",
+      "Lista los consumos de tarjeta con sus cuotas (monto, período, si está paga) y cuántas quedan pendientes.",
+      {},
+      () => cards.listCardPurchases(ctx)
+    );
+
+    tool(
+      "list_pending_installments",
+      "Lista las CUOTAS PENDIENTES (lo que falta pagar de tarjeta), ordenadas por mes. Opcional: limitá hasta un período con untilYear/untilMonth.",
+      {
+        untilYear: z.number().int().optional(),
+        untilMonth: z.number().int().min(1).max(12).optional(),
+      },
+      (a) => cards.listPendingInstallments(ctx, a)
+    );
+
+    tool(
+      "mark_installment_paid",
+      "Marca una cuota de un consumo como PAGADA (por descripción o id del consumo + número de cuota).",
+      {
+        purchase: z.string().describe("Descripción o id del consumo."),
+        number: z.number().int().min(1).describe("Número de cuota."),
+      },
+      (a) => cards.markInstallment(ctx, { ...(a as object), isPaid: true } as Parameters<typeof cards.markInstallment>[1])
+    );
+
+    tool(
+      "mark_installment_unpaid",
+      "Marca una cuota como NO pagada.",
+      {
+        purchase: z.string().describe("Descripción o id del consumo."),
+        number: z.number().int().min(1).describe("Número de cuota."),
+      },
+      (a) => cards.markInstallment(ctx, { ...(a as object), isPaid: false } as Parameters<typeof cards.markInstallment>[1])
+    );
+
+    tool(
+      "delete_card_purchase",
+      "Elimina un consumo de tarjeta y sus cuotas. Acción irreversible.",
+      { purchase: z.string().describe("Descripción o id del consumo.") },
+      (a) => cards.deleteCardPurchase(ctx, a as { purchase: string })
     );
 
     // ── Prompt reutilizable: procesar invoice ─────────────────────────────────────

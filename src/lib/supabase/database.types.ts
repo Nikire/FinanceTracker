@@ -114,6 +114,95 @@ export type Database = {
         }
         Relationships: []
       }
+      card_purchases: {
+        Row: {
+          card: string | null
+          created_at: string
+          currency: Database["public"]["Enums"]["currency_type"]
+          description: string
+          id: string
+          installments: number
+          notes: string | null
+          purchase_date: string
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card?: string | null
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
+          description: string
+          id?: string
+          installments?: number
+          notes?: string | null
+          purchase_date: string
+          total_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card?: string | null
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
+          description?: string
+          id?: string
+          installments?: number
+          notes?: string | null
+          purchase_date?: string
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      card_installments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          is_paid: boolean
+          month: number
+          number: number
+          paid_at: string | null
+          purchase_id: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          is_paid?: boolean
+          month: number
+          number: number
+          paid_at?: string | null
+          purchase_id: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          is_paid?: boolean
+          month?: number
+          number?: number
+          paid_at?: string | null
+          purchase_id?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_installments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "card_purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exchange_rates: {
         Row: {
           created_at: string
@@ -369,7 +458,7 @@ export type Database = {
       attachment_entity: "service" | "annual_expense" | "income"
       currency_type: "ARS" | "USD"
       exchange_rate_kind: "service" | "income"
-      group_entity: "service" | "annual_expense" | "income"
+      group_entity: "service" | "annual_expense" | "income" | "card_purchase"
       income_frequency: "monthly" | "annual" | "fixed"
       service_recurrence: "monthly" | "one_time"
     }
@@ -505,7 +594,7 @@ export const Constants = {
       attachment_entity: ["service", "annual_expense", "income"],
       currency_type: ["ARS", "USD"],
       exchange_rate_kind: ["service", "income"],
-      group_entity: ["service", "annual_expense", "income"],
+      group_entity: ["service", "annual_expense", "income", "card_purchase"],
       income_frequency: ["monthly", "annual", "fixed"],
       service_recurrence: ["monthly", "one_time"],
     },
