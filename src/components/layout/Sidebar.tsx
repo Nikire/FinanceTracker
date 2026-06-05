@@ -9,6 +9,7 @@ import {
   TrendingUp,
   FolderTree,
   CreditCard,
+  ChartColumnBig,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/analisis", label: "Análisis", icon: ChartColumnBig },
   { href: "/servicios", label: "Servicios", icon: Repeat2 },
   { href: "/gastos", label: "Gastos anuales", icon: CalendarDays },
   { href: "/ingresos", label: "Ingresos", icon: TrendingUp },
