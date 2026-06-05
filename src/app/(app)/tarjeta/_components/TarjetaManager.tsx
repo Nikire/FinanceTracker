@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ListChecks } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { createCardPurchase, deleteCardPurchase, setInstallmentPaid } from "@/lib/actions/cards";
 import { GroupTags, type GroupOption } from "@/components/shared/GroupTags";
@@ -17,9 +17,14 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const periodLabel = (c: Cuota) => `${MESES[c.month - 1]} ${String(c.year).slice(2)}`;
+const fmt = (amount: number, currency: string) =>
+  currency === "USD" ? `USD ${amount.toFixed(2)}` : formatCurrency(amount);
 
 interface Props {
   purchases: CardPurchaseView[];
@@ -28,19 +33,13 @@ interface Props {
   rate: number | null;
 }
 
-function fmt(amount: number, currency: string) {
-  return currency === "USD" ? `USD ${amount.toFixed(2)}` : formatCurrency(amount);
-}
-
 export function TarjetaManager({ purchases, groups, memberMap, rate }: Props) {
   const router = useRouter();
   const [openCreate, setOpenCreate] = useState(false);
+  const [editingCuotas, setEditingCuotas] = useState<CardPurchaseView | null>(null);
   const [groupFilter, setGroupFilter] = useState<string>("all");
 
-  // Cuotas pendientes (todas las compras)
-  const pending = purchases.flatMap((p) =>
-    p.cuotas.filter((c) => !c.is_paid).map((c) => ({ p, c }))
-  );
+  const pending = purchases.flatMap((p) => p.cuotas.filter((c) => !c.is_paid).map((c) => ({ p, c })));
   pending.sort((a, b) => a.c.year - b.c.year || a.c.month - b.c.month);
   const pendingArs = pending.reduce(
     (s, { p, c }) => s + (p.currency === "USD" ? (rate ? c.amount * rate : 0) : c.amount),
@@ -52,12 +51,6 @@ export function TarjetaManager({ purchases, groups, memberMap, rate }: Props) {
       ? purchases
       : purchases.filter((p) => (memberMap[p.id] ?? []).includes(groupFilter));
 
-  async function toggleCuota(c: Cuota) {
-    const r = await setInstallmentPaid(c.id, !c.is_paid);
-    if (r.error) toast.error(r.error);
-    else router.refresh();
-  }
-
   async function handleDelete(id: string, desc: string) {
     if (!confirm(`¿Eliminar "${desc}" y sus cuotas?`)) return;
     const r = await deleteCardPurchase(id);
@@ -66,38 +59,26 @@ export function TarjetaManager({ purchases, groups, memberMap, rate }: Props) {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Resumen de pendientes */}
-      <div className="rounded-lg border bg-card p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground">Cuotas pendientes</p>
-            <p className="mt-0.5 text-xl font-semibold">
-              {pending.length} · {formatCurrency(pendingArs)}
-            </p>
-          </div>
-          <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-            <DialogTrigger render={<Button size="sm" />}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              Nuevo consumo
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Nuevo consumo de tarjeta</DialogTitle>
-              </DialogHeader>
-              <ConsumoForm onDone={() => setOpenCreate(false)} />
-            </DialogContent>
-          </Dialog>
-        </div>
-        {pending.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {pending.slice(0, 12).map(({ p, c }) => (
-              <Badge key={c.id} variant="outline" className="text-xs">
-                {p.description} · cuota {c.number}/{p.installments} · {periodLabel(c)} · {fmt(c.amount, p.currency)}
-              </Badge>
-            ))}
-          </div>
-        )}
+    <div className="space-y-4">
+      {/* Encabezado: pendientes + acción */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {purchases.length} consumos ·{" "}
+          <span className="font-medium text-foreground">{pending.length} cuotas pendientes</span>
+          {pending.length > 0 && <> · {formatCurrency(pendingArs)}</>}
+        </p>
+        <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+          <DialogTrigger render={<Button size="sm" />}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Nuevo consumo
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nuevo consumo de tarjeta</DialogTitle>
+            </DialogHeader>
+            <ConsumoForm onDone={() => setOpenCreate(false)} />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {groups.length > 0 && purchases.length > 0 && (
@@ -127,53 +108,112 @@ export function TarjetaManager({ purchases, groups, memberMap, rate }: Props) {
           <p className="mt-1 text-xs text-muted-foreground">Hacé click en "Nuevo consumo" para empezar</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {visible.map((p) => (
-            <div key={p.id} className="rounded-lg border p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium">{p.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {p.purchase_date}
-                    {p.card ? ` · ${p.card}` : ""} · Total {fmt(p.total_amount, p.currency)}
-                    {p.installments > 1 ? ` en ${p.installments} cuotas` : " (pago único)"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <GroupTags
-                    entityType="card_purchase"
-                    entityId={p.id}
-                    groups={groups}
-                    memberIds={memberMap[p.id] ?? []}
-                  />
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(p.id, p.description)}>
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {p.cuotas.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => toggleCuota(c)}
-                    title={c.is_paid ? "Marcar como pendiente" : "Marcar como paga"}
-                    className={`rounded-md px-2 py-1 text-xs transition-colors ${
-                      c.is_paid
-                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400"
-                        : "bg-muted text-muted-foreground hover:bg-muted/70"
-                    }`}
-                  >
-                    {p.installments > 1 ? `${c.number}/${p.installments} · ` : ""}
-                    {periodLabel(c)} · {fmt(c.amount, p.currency)}
-                    {c.is_paid ? " ✓" : ""}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Descripción</TableHead>
+              <TableHead>Grupos</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-center">Cuotas</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visible.map((p) => {
+              const paid = p.cuotas.filter((c) => c.is_paid).length;
+              const pend = p.installments - paid;
+              return (
+                <TableRow key={p.id}>
+                  <TableCell>
+                    <p className="font-medium">{p.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {p.purchase_date}{p.card ? ` · ${p.card}` : ""}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <GroupTags
+                      entityType="card_purchase"
+                      entityId={p.id}
+                      groups={groups}
+                      memberIds={memberMap[p.id] ?? []}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {fmt(p.total_amount, p.currency)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {p.installments === 1 ? (
+                      <Badge variant={pend === 0 ? "secondary" : "outline"} className="text-xs">
+                        {pend === 0 ? "Pagado" : "Pendiente"}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs">
+                        {paid}/{p.installments}
+                        {pend > 0 && (
+                          <span className="ml-1 text-amber-600 dark:text-amber-400">· {pend} pend.</span>
+                        )}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Dialog
+                        open={editingCuotas?.id === p.id}
+                        onOpenChange={(open) => !open && setEditingCuotas(null)}
+                      >
+                        <DialogTrigger
+                          render={
+                            <Button variant="ghost" size="icon" onClick={() => setEditingCuotas(p)} title="Ver/editar cuotas" />
+                          }
+                        >
+                          <ListChecks className="h-4 w-4" />
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Cuotas — {p.description}</DialogTitle>
+                          </DialogHeader>
+                          <CuotasList purchase={p} />
+                        </DialogContent>
+                      </Dialog>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id, p.description)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       )}
+    </div>
+  );
+}
+
+function CuotasList({ purchase }: { purchase: CardPurchaseView }) {
+  const router = useRouter();
+  async function toggle(c: Cuota) {
+    const r = await setInstallmentPaid(c.id, !c.is_paid);
+    if (r.error) toast.error(r.error);
+    else router.refresh();
+  }
+  return (
+    <div className="space-y-2">
+      {purchase.cuotas.map((c) => (
+        <div key={c.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
+          <span>
+            {purchase.installments > 1 ? `Cuota ${c.number}/${purchase.installments} · ` : ""}
+            {periodLabel(c)} · <span className="font-mono">{fmt(c.amount, purchase.currency)}</span>
+          </span>
+          <Button
+            size="sm"
+            variant={c.is_paid ? "secondary" : "outline"}
+            onClick={() => toggle(c)}
+          >
+            {c.is_paid ? "Pagada ✓" : "Marcar paga"}
+          </Button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -190,7 +230,6 @@ function ConsumoForm({ onDone }: { onDone: () => void }) {
     paid_count: "0",
     card: "",
   });
-
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
   async function onSubmit(e: FormEvent) {

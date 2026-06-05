@@ -39,7 +39,7 @@ export function ResumenCards({
         </CardHeader>
         <CardContent>
           <p className="text-2xl font-bold">{formatCurrency(gastosMensuales)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Servicios activos</p>
+          <p className="mt-1 text-xs text-muted-foreground">Servicios + cuotas de tarjeta</p>
         </CardContent>
       </Card>
 
