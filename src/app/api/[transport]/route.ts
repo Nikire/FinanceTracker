@@ -431,6 +431,38 @@ const handler = createMcpHandler(
         ],
       })
     );
+
+    // ── Prompt reutilizable: procesar un resumen/estado de cuenta del mes ──────────
+    server.prompt(
+      "process_statement",
+      "Workflow para desglosar un resumen del mes (estado de cuenta, tarjeta, extracto) ítem por ítem: clasificar cada línea, dedup, y agregar como servicio/gasto/ingreso con preview y confirmación.",
+      () => ({
+        messages: [
+          {
+            role: "user" as const,
+            content: {
+              type: "text" as const,
+              text: [
+                "Vas a desglosar un RESUMEN DEL MES (estado de cuenta, resumen de tarjeta, extracto bancario) para FinanceTracker. Seguí SIEMPRE este flujo:",
+                "",
+                "1. LEER: identificá el período (mes/año) que cubre el resumen y extraé CADA línea: fecha, descripción/comercio, monto y moneda (ARS/USD). Ignorá líneas que no son movimientos (saldos, totales, pagos de la propia tarjeta, intereses si el usuario no los trackea).",
+                "2. DEDUP del archivo: calculá el SHA-256 y llamá check_invoice. Si exists=true, avisá que ese resumen ya fue cargado y confirmá con el usuario si igual querés re-analizar los ítems.",
+                "3. CLASIFICAR cada ítem (llamá list_services y list_groups una vez para tener contexto). Para cada línea decidí:",
+                "   - Gasto de un SERVICIO EXISTENTE (matcheá por comercio) → set_service_month_amount(servicio, monto, moneda, período) + mark_service_paid (el resumen ya está pago).",
+                "   - SERVICIO NUEVO recurrente → create_service con el color hex de la marca (conocimiento o búsqueda web) y luego aplicá el monto del mes.",
+                "   - Gasto ÚNICO / no recurrente → create_annual_expense (con due_date = fecha del ítem) o un servicio recurrence='one_time', según corresponda.",
+                "   - COBRO / INGRESO → create_income en ese período.",
+                "   - No reconocido → marcá 'a revisar' y preguntá al usuario.",
+                "4. IDEMPOTENCIA: los montos por mes de servicios son idempotentes (mismo servicio+mes no duplica). Ingresos y gastos anuales NO tienen dedup automático: si el resumen se solapa con uno ya cargado, avisá para no duplicar.",
+                "5. PREVIEW (obligatorio): mostrá una TABLA ítem por ítem con [descripción · monto · clasificación · acción propuesta · servicio/grupo destino], más el total del mes y los ítems salteados/a revisar. Esperá confirmación del usuario.",
+                "6. EJECUTAR (con el OK): aplicá cada acción. Sugerí agrupar los ítems en grupos con add_to_group cuando compartan origen.",
+                "7. ADJUNTAR: subí el archivo del resumen con upload_invoice (vinculado a un servicio representativo o al período). Reportá un resumen final: agregados / actualizados / salteados / a revisar y el total.",
+              ].join("\n"),
+            },
+          },
+        ],
+      })
+    );
   },
   {
     // Capabilities: dejamos que mcp-handler infiera las tools registradas.
