@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 
 export type GroupOption = { id: string; name: string; color: string | null };
-export type GroupEntityType = "service" | "annual_expense" | "income";
+export type GroupEntityType = "service" | "annual_expense" | "income" | "card_purchase";
 
 interface GroupTagsProps {
   entityType: GroupEntityType;

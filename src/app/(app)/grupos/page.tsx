@@ -5,7 +5,7 @@ import { GruposManager } from "./_components/GruposManager";
 export const dynamic = "force-dynamic";
 
 export type GroupMember = {
-  entity_type: "service" | "annual_expense" | "income";
+  entity_type: "service" | "annual_expense" | "income" | "card_purchase";
   entity_id: string;
   label: string;
   amount: number;
@@ -36,6 +36,7 @@ export default async function GruposPage() {
     { data: services },
     { data: annual },
     { data: income },
+    { data: cards },
     { data: rates },
   ] = await Promise.all([
     supabase.from("groups").select("*").order("name"),
@@ -43,6 +44,7 @@ export default async function GruposPage() {
     supabase.from("services").select("id, name, amount, currency"),
     supabase.from("annual_expenses").select("id, name, amount, currency"),
     supabase.from("income").select("id, description, amount, currency"),
+    supabase.from("card_purchases").select("id, description, total_amount, currency"),
     supabase.from("exchange_rates").select("usd_to_ars, kind, year, month"),
   ]);
 
@@ -53,8 +55,10 @@ export default async function GruposPage() {
   const svc = new Map<string, Cat>((services ?? []).map((s) => [s.id, { id: s.id, label: s.name, amount: s.amount, currency: s.currency }]));
   const exp = new Map<string, Cat>((annual ?? []).map((e) => [e.id, { id: e.id, label: e.name, amount: e.amount, currency: e.currency }]));
   const inc = new Map<string, Cat>((income ?? []).map((i) => [i.id, { id: i.id, label: i.description, amount: i.amount, currency: i.currency }]));
+  const crd = new Map<string, Cat>((cards ?? []).map((c) => [c.id, { id: c.id, label: c.description, amount: c.total_amount, currency: c.currency }]));
 
-  const catFor = (t: GroupMember["entity_type"]) => (t === "service" ? svc : t === "annual_expense" ? exp : inc);
+  const catFor = (t: GroupMember["entity_type"]) =>
+    t === "service" ? svc : t === "annual_expense" ? exp : t === "income" ? inc : crd;
 
   const groupViews: GroupView[] = (groups ?? []).map((g) => {
     const members: GroupMember[] = (items ?? [])
@@ -84,6 +88,7 @@ export default async function GruposPage() {
     service: [...svc.values()].map((c) => ({ id: c.id, label: c.label })) as EntityOption[],
     annual_expense: [...exp.values()].map((c) => ({ id: c.id, label: c.label })) as EntityOption[],
     income: [...inc.values()].map((c) => ({ id: c.id, label: c.label })) as EntityOption[],
+    card_purchase: [...crd.values()].map((c) => ({ id: c.id, label: c.label })) as EntityOption[],
   };
 
   return (
