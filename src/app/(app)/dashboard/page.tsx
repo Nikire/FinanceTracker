@@ -31,7 +31,7 @@ function toARS(amount: number, currency: string | null, rate: number | null): nu
   return amount;
 }
 
-type ServiceRow = { id: string; name: string; amount: number; active: boolean; currency: string | null; color: string | null };
+type ServiceRow = { id: string; name: string; amount: number; active: boolean; currency: string | null; color: string | null; created_at: string };
 type RecordRow = Tables<"service_monthly_records">;
 type IngresoRow = { amount: number; currency: string | null; year: number; month: number };
 type RateRow = { usd_to_ars: number; kind: string; year: number; month: number };
@@ -50,8 +50,17 @@ function rateFor(rates: RateRow[], kind: string, year: number, month: number): n
   return ofKind[0]?.usd_to_ars ?? null;
 }
 
-// Estado activo efectivo de un servicio en un mes (busca hacia atrás, cae en service.active)
+// Mes de inicio del servicio: el registro más temprano, o su mes de creación
+function serviceStartYm(service: ServiceRow, records: RecordRow[]): number {
+  const recs = records.filter((r) => r.service_id === service.id);
+  if (recs.length) return Math.min(...recs.map((r) => ym(r.year, r.month)));
+  const d = new Date(service.created_at);
+  return ym(d.getUTCFullYear(), d.getUTCMonth() + 1);
+}
+
+// Estado activo efectivo de un servicio en un mes (no cuenta antes de su mes de inicio)
 function effectiveActive(service: ServiceRow, records: RecordRow[], year: number, month: number): boolean {
+  if (ym(year, month) < serviceStartYm(service, records)) return false;
   const relevant = records
     .filter((r) => r.service_id === service.id && r.is_active !== null)
     .filter((r) => r.year < year || (r.year === year && r.month <= month))
@@ -139,7 +148,7 @@ export default async function DashboardPage() {
     { data: rates },
     { data: cardInsts },
   ] = await Promise.all([
-    supabase.from("services").select("id, name, amount, active, currency, color"),
+    supabase.from("services").select("id, name, amount, active, currency, color, created_at"),
     supabase.from("service_monthly_records").select("*"),
     supabase.from("annual_expenses").select("due_date, amount, currency"),
     supabase.from("income").select("amount, currency, year, month"),

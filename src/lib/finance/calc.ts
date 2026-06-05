@@ -37,12 +37,28 @@ export function rateFor(
 }
 
 /** Estado activo efectivo de un servicio en un mes (busca hacia atrás, cae en service.active). */
+/**
+ * Mes de inicio de un servicio (ym): el más temprano con registro mensual, o el
+ * mes de creación si no tiene registros. Un servicio no cuenta antes de su inicio.
+ */
+export function serviceStartYm(
+  service: Pick<ServiceRow, "id" | "created_at">,
+  records: RecordRow[]
+): number {
+  const recs = records.filter((r) => r.service_id === service.id);
+  if (recs.length) return Math.min(...recs.map((r) => ym(r.year, r.month)));
+  const d = new Date(service.created_at);
+  return ym(d.getUTCFullYear(), d.getUTCMonth() + 1);
+}
+
 export function effectiveActive(
-  service: Pick<ServiceRow, "id" | "active">,
+  service: Pick<ServiceRow, "id" | "active" | "created_at">,
   records: RecordRow[],
   year: number,
   month: number
 ): boolean {
+  // Antes del mes de inicio el servicio no existe → no cuenta.
+  if (ym(year, month) < serviceStartYm(service, records)) return false;
   const relevant = records
     .filter((r) => r.service_id === service.id && r.is_active !== null)
     .filter((r) => r.year < year || (r.year === year && r.month <= month))
