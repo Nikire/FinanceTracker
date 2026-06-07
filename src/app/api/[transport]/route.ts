@@ -316,7 +316,7 @@ const handler = createMcpHandler(
       "upload_invoice",
       "Sube un invoice (base64) al Storage y lo vincula a un servicio/gasto/ingreso. Idempotente: si ese archivo ya está vinculado a esa entidad, no duplica.",
       {
-        entity_type: z.enum(["service", "annual_expense", "income"]).describe("Tipo de entidad a la que pertenece el invoice."),
+        entity_type: z.enum(["service", "annual_expense", "income", "card_purchase"]).describe("Tipo de entidad a la que pertenece el invoice."),
         entity_id: z.string().describe("id de la entidad (ej id del servicio)."),
         file_name: z.string().describe("Nombre original del archivo, ej 'google-2026-05.pdf'."),
         content_base64: z.string().describe("Contenido del archivo codificado en base64."),
@@ -329,7 +329,7 @@ const handler = createMcpHandler(
       "list_attachments",
       "Lista los adjuntos, opcionalmente filtrando por entidad. Incluye URLs firmadas temporales para verlos.",
       {
-        entity_type: z.enum(["service", "annual_expense", "income"]).optional(),
+        entity_type: z.enum(["service", "annual_expense", "income", "card_purchase"]).optional(),
         entity_id: z.string().optional(),
       },
       (a) => files.listAttachments(ctx, a as Parameters<typeof files.listAttachments>[1])

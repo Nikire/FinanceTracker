@@ -455,7 +455,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      attachment_entity: "service" | "annual_expense" | "income"
+      attachment_entity: "service" | "annual_expense" | "income" | "card_purchase"
       currency_type: "ARS" | "USD"
       exchange_rate_kind: "service" | "income"
       group_entity: "service" | "annual_expense" | "income" | "card_purchase"
@@ -591,7 +591,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      attachment_entity: ["service", "annual_expense", "income"],
+      attachment_entity: ["service", "annual_expense", "income", "card_purchase"],
       currency_type: ["ARS", "USD"],
       exchange_rate_kind: ["service", "income"],
       group_entity: ["service", "annual_expense", "income", "card_purchase"],

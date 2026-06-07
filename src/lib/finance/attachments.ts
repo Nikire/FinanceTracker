@@ -11,7 +11,7 @@ import type { OpResult } from "./operations";
 
 const BUCKET = "attachments";
 const SIGNED_URL_TTL = 60 * 60 * 24 * 7; // 7 días
-const ENTITY_TYPES = ["service", "annual_expense", "income"] as const;
+const ENTITY_TYPES = ["service", "annual_expense", "income", "card_purchase"] as const;
 type EntityType = (typeof ENTITY_TYPES)[number];
 
 type Ctx = { sb: AdminClient; userId: string };
